@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset all inherited styles inside React root */
+.wk-app-container,
+.wk-app-container * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Анімація з дизайну */
+@keyframes wkFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: wkFadeIn 0.25s ease-out both;
+}
+
+/* Скролбар (клас custom-scrollbar є в дизайні) */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+}
+
+.custom-scrollbar {
+    scrollbar-color: rgba(255, 255, 255, 0.18) rgba(255, 255, 255, 0.04);
+}
+
+/* Force full height for nested containers */
+.wk-app-container {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Override any WordPress/Elementor interference */
+#wk-react-root .h-screen {
+    height: 100% !important;
+    min-height: 100% !important;
+}
+
+#wk-react-root button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+#wk-react-root input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+#wk-react-root input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #D4AF37;
+    cursor: pointer;
+    margin-top: -6px;
+}
+
+#wk-react-root input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: #2A303C;
+    border-radius: 4px;
+}
+
+/* Fix font rendering */
+#wk-react-root {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Ensure flexbox works properly */
+#wk-react-root .flex {
+    display: flex !important;
+}
+
+#wk-react-root .flex-1 {
+    flex: 1 1 0% !important;
+}
+
+#wk-react-root .flex-col {
+    flex-direction: column !important;
+}
+
+/* Grid fixes */
+#wk-react-root .grid {
+    display: grid !important;
+}
+
+#wk-react-root .grid-cols-8 {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+}
+
+#wk-react-root .grid-rows-8 {
+    grid-template-rows: repeat(8, minmax(0, 1fr)) !important;
+}
+
+/* Aspect ratio fix */
+#wk-react-root .aspect-square {
+    aspect-ratio: 1 / 1 !important;
+}
+
+/* Typography overrides to prevent WP interference */
+#wk-react-root h1,
+#wk-react-root h2,
+#wk-react-root h3,
+#wk-react-root h4,
+#wk-react-root p,
+#wk-react-root span,
+#wk-react-root div {
+    line-height: inherit;
+    margin: 0;
+    padding: 0;
+}
+
+#wk-react-root a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Fix SVG icons */
+#wk-react-root svg {
+    display: inline-block;
+    vertical-align: middle;
+}
