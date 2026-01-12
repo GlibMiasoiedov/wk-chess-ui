@@ -1153,18 +1153,9 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                             <ChessBoard
                                                 position={isExploring ? explorationFen : currentFen}
                                                 orientation={playerColor === 'b' ? 'black' : 'white'}
-                                                // Enable drag ONLY during exploration or full review
-                                                arePiecesDraggable={isExploring || uiState === 'full-review'}
-                                                onMove={handleExplorationMove}
-                                                // Full Analysis Features
-                                                allowDrawingArrows={true}
-                                                showNotation={true}
-                                                disableArrow={false}
-                                                animationDuration={300}
-                                                // Visuals
-                                                customDarkSquareStyle={{ backgroundColor: '#779556' }}
-                                                customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
-                                                dropSquareStyle={{ boxShadow: 'inset 0 0 1px 6px rgba(212,175,55,0.4)' }}
+                                                disabled={uiState !== 'full-review' || showFinalPosition}
+                                                onMove={uiState === 'full-review' ? (from, to) => handleExplorationMove({ from, to }) : null}
+                                                allowAllColors={uiState === 'full-review'}
                                             />
                                         </div>
 
@@ -1962,14 +1953,7 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                     {/* Board */}
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', minHeight: 0 }}>
                         <div style={{ width: '100%', maxWidth: 'min(100vw - 8px, 100vh - 260px)', aspectRatio: '1/1', boxShadow: '0 0 30px rgba(0,0,0,0.4)', border: '1px solid #2A303C', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#151922' }}>
-                            <ChessBoard
-                                position={currentFen}
-                                orientation={playerColor === 'b' ? 'black' : 'white'}
-                                arePiecesDraggable={false} // Read-only on mobile for now to prevent scroll issues
-                                allowDrawingArrows={true}
-                                showNotation={true}
-                                animationDuration={200}
-                            />
+                            <ChessBoard position={currentFen} orientation={playerColor === 'b' ? 'black' : 'white'} disabled={true} />
                         </div>
                     </div>
                     {/* Player info */}
