@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Chess } from 'chess.js';
+import { Chessboard } from 'react-chessboard';
 import {
     Crown, Zap, ChevronRight, Target, Shield, Sword,
     GraduationCap, Play, Clock, Flame, Rabbit, X,
@@ -55,6 +57,28 @@ const ALL_TIME_OPTS = [
 ];
 
 export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobile }) {
+    // 👇 TEST BOARD STATE
+    const [testGame, setTestGame] = useState(new Chess());
+
+    function onTestDrop(sourceSquare, targetSquare) {
+        try {
+            const gameCopy = new Chess(testGame.fen());
+            const move = gameCopy.move({
+                from: sourceSquare,
+                to: targetSquare,
+                promotion: 'q',
+            });
+
+            if (move === null) return false;
+
+            setTestGame(gameCopy);
+            return true;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
+    }
+
     const [selectedBotIndex, setSelectedBotIndex] = useState(2); // Default Casual
     const [selectedTime, setSelectedTime] = useState('3+2'); // Default 3|2
     const [customTimeState, setCustomTimeState] = useState({ min: 10, inc: 0 }); // Custom values
@@ -117,7 +141,6 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
         return found ? found.label : selectedTime;
     };
 
-    // --- INTERACTIVE SUMMARY HANDLERS ---
     // --- INTERACTIVE SUMMARY HANDLERS ---
     const cycleDifficulty = () => {
         console.log('[NewGame] Cycling difficulty');
@@ -300,6 +323,30 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
 
     return (
         <div style={styles.container}>
+
+            {/* 👇 TEST BOARD OVERLAY (Temporary Debug) */}
+            <div style={{
+                backgroundColor: 'rgba(255,0,0,0.1)',
+                borderBottom: '2px dashed red',
+                padding: '10px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '20px',
+                flexShrink: 0
+            }}>
+                <div style={{ color: 'red', fontWeight: 'bold' }}>🐞 DEBUG BOARD (v1.15)</div>
+                <div style={{ width: '200px', height: '200px', pointerEvents: 'auto', isolation: 'isolate' }}>
+                    <Chessboard
+                        position={testGame.fen()}
+                        onPieceDrop={onTestDrop}
+                        boardWidth={200}
+                    />
+                </div>
+                <div style={{ fontSize: '10px', color: '#ccc', maxWidth: '200px', overflowWrap: 'break-word' }}>
+                    FEN: {testGame.fen()}
+                </div>
+            </div>
 
             {/* --- HEADER --- */}
             <div style={styles.header}>
