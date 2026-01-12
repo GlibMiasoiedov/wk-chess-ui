@@ -6,7 +6,6 @@ import {
     GraduationCap, Play, Clock, Flame, Rabbit, X,
     LayoutGrid, ChevronDown, Settings, Dna, HelpCircle
 } from 'lucide-react';
-import DebugConsole from './components/DebugConsole.jsx';
 
 // --- THEME CONSTANTS ---
 const THEME = {
@@ -57,27 +56,6 @@ const ALL_TIME_OPTS = [
 ];
 
 export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobile }) {
-    // 👇 TEST BOARD STATE
-    const [testGame, setTestGame] = useState(new Chess());
-
-    function onTestDrop(sourceSquare, targetSquare) {
-        try {
-            const gameCopy = new Chess(testGame.fen());
-            const move = gameCopy.move({
-                from: sourceSquare,
-                to: targetSquare,
-                promotion: 'q',
-            });
-
-            if (move === null) return false;
-
-            setTestGame(gameCopy);
-            return true;
-        } catch (e) {
-            console.error(e);
-            return false;
-        }
-    }
 
     const [selectedBotIndex, setSelectedBotIndex] = useState(2); // Default Casual
     const [selectedTime, setSelectedTime] = useState('3+2'); // Default 3|2
@@ -318,48 +296,22 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
         }
     };
 
-    const handleInteractiveEnter = (id) => setHoveredInteractive(prev => ({ ...prev, [id]: true }));
-    const handleInteractiveLeave = (id) => setHoveredInteractive(prev => ({ ...prev, [id]: false }));
-
     return (
         <div style={styles.container}>
 
-            {/* 👇 TEST BOARD OVERLAY (Temporary Debug) */}
-            <div style={{
-                backgroundColor: 'rgba(255,0,0,0.1)',
-                borderBottom: '2px dashed red',
-                padding: '10px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '20px',
-                flexShrink: 0
-            }}>
-                <div style={{ color: 'red', fontWeight: 'bold' }}>🐞 DEBUG BOARD (v1.16 - API FIXED)</div>
-                <div style={{ width: '200px', height: '200px', pointerEvents: 'auto', isolation: 'isolate' }}>
-                    <Chessboard
-                        position={testGame.fen()}
-                        onPieceDrop={onTestDrop}
-                        boardWidth={200}
-                    />
-                </div>
-                <div style={{ fontSize: '10px', color: '#ccc', maxWidth: '200px', overflowWrap: 'break-word' }}>
-                    FEN: {testGame.fen()}
-                </div>
-            </div>
-
-            {/* --- HEADER --- */}
+            {/* HEADER */}
             <div style={styles.header}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={styles.headerIconBox}>
-                        <LayoutGrid size={18} style={{ color: THEME.accent }} />
+                        <Crown size={20} color={THEME.accent} />
                     </div>
-                    <span style={styles.headerTitle}>
-                        New Game
-                    </span>
+                    <div>
+                        <div style={styles.headerTitle}>CHESS ACADEMY</div>
+                        <div style={{ fontSize: '10px', color: '#64748B' }}>Powered by Stockfish 16</div>
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                     <button
                         style={styles.learnButton}
                         onMouseEnter={() => setHoveredLearn(true)}
@@ -367,369 +319,239 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         onClick={onOpenLearning}
                     >
                         <GraduationCap size={18} />
-                        <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', display: isMobile ? 'none' : 'block' }}>Learn Basics</span>
+                        {!isMobile && "LEARN BASICS"}
                     </button>
-
-                    {!isMobile && <div style={{ height: '16px', width: '1px', backgroundColor: '#2A303C' }}></div>}
-
                     <button
                         style={styles.closeButton}
                         onMouseEnter={() => setHoveredClose(true)}
                         onMouseLeave={() => setHoveredClose(false)}
-                        onClick={() => window.location.reload()}
                     >
                         <X size={24} />
                     </button>
                 </div>
             </div>
 
-            {/* --- CONTENT ROW --- */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-                {/* LEFT: VISUAL PREVIEW & SUMMARY (Desktop Only) */}
+                {/* LEFT PANEL: AVATAR & VISUALS */}
                 <div style={styles.leftPanel}>
-
-                    {/* Background Decoration */}
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.05 }}>
-                        <div style={{ position: 'absolute', top: '25%', left: '25%', width: '384px', height: '384px', backgroundColor: THEME.accent, borderRadius: '50%', filter: 'blur(150px)' }}></div>
+                    <div
+                        style={styles.botAvatarLarge}
+                        onMouseEnter={() => setHoveredBot(true)}
+                        onMouseLeave={() => setHoveredBot(false)}
+                        onClick={cycleDifficulty}
+                    >
+                        <div style={{ color: THEME.accent }}>
+                            {activeBot.icon}
+                        </div>
+                        {/* Status Ring */}
+                        <div style={{
+                            position: 'absolute', inset: '-4px', borderRadius: '50%',
+                            border: `2px solid ${THEME.accent}`, opacity: 0.3,
+                            animation: 'pulse 3s infinite'
+                        }} />
                     </div>
 
-                    <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '384px', gap: '32px' }}>
-
-                        {/* Match Title */}
-                        <div style={{ textAlign: 'center' }}>
-                            <h1 style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>
-                                White Knight <span style={{ color: THEME.accent }}>{activeBot.name}</span>
-                            </h1>
-                            <p style={{ color: '#64748B', fontSize: '14px', fontWeight: 500 }}>vs Hero User</p>
+                    <div style={{ textAlign: 'center', marginBottom: '32px', width: '100%', maxWidth: '320px' }}>
+                        <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>
+                            WHITE KNIGHT <span style={{ color: THEME.accent }}>{activeBot.name.toUpperCase()}</span>
                         </div>
+                        <div style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.5 }}>
+                            {activeBot.desc}
+                        </div>
+                    </div>
 
-                        {/* Bot Avatar Large */}
+                    {/* Interactive Summary Grid (Visible on Mobile/Desktop) */}
+                    <div style={styles.summaryGrid}>
+                        {/* Difficulty Tile */}
                         <div
-                            style={styles.botAvatarLarge}
+                            style={styles.summaryCard('diff')}
+                            onMouseEnter={() => setHoveredInteractive(p => ({ ...p, diff: true }))}
+                            onMouseLeave={() => setHoveredInteractive(p => ({ ...p, diff: false }))}
                             onClick={cycleDifficulty}
-                            onMouseEnter={() => setHoveredBot(true)}
-                            onMouseLeave={() => setHoveredBot(false)}
                         >
-                            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${THEME.accent}`, opacity: hoveredBot ? 0.4 : 0.2, filter: 'blur(1px)', transition: 'opacity 0.5s' }}></div>
-
-                            <div style={{ color: THEME.accent, transform: hoveredBot ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.5s' }}>
-                                {activeBot.icon}
-                            </div>
-
-                            {/* Level Badge */}
-                            <div style={{ position: 'absolute', bottom: '-12px', backgroundColor: THEME.accent, color: 'black', fontSize: '12px', fontWeight: 'bold', padding: '4px 12px', borderRadius: '999px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                Rating: {activeBot.rating}
-                            </div>
+                            <span style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase' }}>Difficulty</span>
+                            <span style={{ color: 'white', fontWeight: 'bold' }}>{activeBot.name}</span>
                         </div>
 
-                        {/* INTERACTIVE SUMMARY GRID */}
-                        <div style={styles.summaryGrid}>
-
-                            {/* Time Control */}
-                            <div
-                                onClick={cycleTime}
-                                onMouseEnter={() => handleInteractiveEnter('time')}
-                                onMouseLeave={() => handleInteractiveLeave('time')}
-                                style={styles.summaryCard('time')}
-                            >
-                                <span style={{ color: hoveredInteractive['time'] ? THEME.accent : '#64748B', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px', transition: 'color 0.2s' }}>Time</span>
-                                <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '14px' }}>{getSelectedTimeLabel()}</span>
-                            </div>
-
-                            {/* Game Mode */}
-                            <div
-                                onClick={toggleMode}
-                                onMouseEnter={() => handleInteractiveEnter('mode')}
-                                onMouseLeave={() => handleInteractiveLeave('mode')}
-                                style={styles.summaryCard('mode')}
-                            >
-                                <span style={{ color: hoveredInteractive['mode'] ? THEME.accent : '#64748B', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px', transition: 'color 0.2s' }}>Mode</span>
-                                <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '14px', textTransform: 'uppercase' }}>{gameMode}</span>
-                            </div>
-
-                            {/* Side */}
-                            <div
-                                onClick={cycleSide}
-                                onMouseEnter={() => handleInteractiveEnter('side')}
-                                onMouseLeave={() => handleInteractiveLeave('side')}
-                                style={styles.summaryCard('side')}
-                            >
-                                <span style={{ color: hoveredInteractive['side'] ? THEME.accent : '#64748B', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px', transition: 'color 0.2s' }}>Side</span>
-                                <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '14px', textTransform: 'capitalize' }}>{selectedColor}</span>
-                            </div>
-
-                            {/* Difficulty */}
-                            <div
-                                onClick={cycleDifficulty}
-                                onMouseEnter={() => handleInteractiveEnter('diff')}
-                                onMouseLeave={() => handleInteractiveLeave('diff')}
-                                style={styles.summaryCard('diff')}
-                            >
-                                <span style={{ color: hoveredInteractive['diff'] ? THEME.accent : '#64748B', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px', transition: 'color 0.2s' }}>Diff</span>
-                                <span style={{ color: THEME.accent, fontFamily: 'monospace', fontSize: '14px' }}>{activeBot.name}</span>
-                            </div>
+                        {/* Side Tile */}
+                        <div
+                            style={styles.summaryCard('side')}
+                            onMouseEnter={() => setHoveredInteractive(p => ({ ...p, side: true }))}
+                            onMouseLeave={() => setHoveredInteractive(p => ({ ...p, side: false }))}
+                            onClick={cycleSide}
+                        >
+                            <span style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase' }}>Playing As</span>
+                            <span style={{ color: 'white', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {selectedColor === 'w' && <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'white' }} />}
+                                {selectedColor === 'b' && <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#333' }} />}
+                                {selectedColor === 'random' && <Dna size={14} />}
+                                {selectedColor === 'random' ? 'Random' : (selectedColor === 'w' ? 'White' : 'Black')}
+                            </span>
                         </div>
 
-                        {/* START GAME BUTTON (Desktop Location) */}
+                        {/* Game Type Tile */}
+                        <div
+                            style={styles.summaryCard('mode')}
+                            onMouseEnter={() => setHoveredInteractive(p => ({ ...p, mode: true }))}
+                            onMouseLeave={() => setHoveredInteractive(p => ({ ...p, mode: false }))}
+                            onClick={toggleMode}
+                        >
+                            <span style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase' }}>Game Type</span>
+                            <span style={{ color: 'white', fontWeight: 'bold' }}>
+                                {gameMode === '960' ? 'Chess 960' : 'Standard'}
+                            </span>
+                        </div>
+
+                        {/* Time Tile */}
+                        <div
+                            style={styles.summaryCard('time')}
+                            onMouseEnter={() => setHoveredInteractive(p => ({ ...p, time: true }))}
+                            onMouseLeave={() => setHoveredInteractive(p => ({ ...p, time: false }))}
+                            onClick={cycleTime}
+                        >
+                            <span style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase' }}>Time Control</span>
+                            <span style={{ color: 'white', fontWeight: 'bold' }}>{getSelectedTimeLabel()}</span>
+                        </div>
+                    </div>
+
+                    {/* START BUTTON */}
+                    <div style={{ width: '100%', maxWidth: '400px', marginTop: 'auto' }}>
                         <button
-                            onClick={handleStartGame}
+                            style={styles.startGameBtn}
                             onMouseEnter={() => setHoveredStart(true)}
                             onMouseLeave={() => setHoveredStart(false)}
-                            style={styles.startGameBtn}
+                            onClick={handleStartGame}
                         >
-                            <Play size={20} fill="currentColor" /> Start Game
+                            <Play size={20} fill="#0f172a" />
+                            START GAME
                         </button>
 
-                    </div>
-
-                    {/* Debug Console - Desktop Only */}
-                    {!isMobile && (
-                        <div style={{ position: 'fixed', bottom: '16px', left: '16px', width: '400px', maxHeight: '300px', zIndex: 1000, opacity: 0.9 }}>
-                            <DebugConsole
-                                botLevel={activeBot.name}
-                                playerColor={selectedColor}
-                                gameInfo={{
-                                    moveCount: 0,
-                                    hasAnalysis: false,
-                                    selectedBotIndex: selectedBotIndex,
-                                    selectedTime: selectedTime,
-                                    screen: 'new-game-desktop'
-                                }}
-                            />
-                        </div>
-                    )}
-                </div>
-
-                {/* RIGHT: SETTINGS PANEL */}
-                <div style={styles.rightPanel}>
-
-                    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '24px 16px' : '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
-                        {/* 0. LEARNING BANNER */}
-                        <div
-                            onClick={onOpenLearning}
+                        <div style={{
+                            marginTop: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            color: '#64748B',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            opacity: hoveredUnknown ? 1 : 0.7,
+                            transition: 'opacity 0.2s'
+                        }}
                             onMouseEnter={() => setHoveredUnknown(true)}
                             onMouseLeave={() => setHoveredUnknown(false)}
-                            style={{
-                                background: 'linear-gradient(to right, #1A1E26, #0F1116)',
-                                border: '1px solid rgba(212,175,55,0.3)',
-                                borderRadius: '12px',
-                                padding: '16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                cursor: 'pointer',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                boxShadow: hoveredUnknown ? '0 0 20px rgba(212,175,55,0.1)' : '0 4px 12px rgba(0,0,0,0.2)',
-                                transform: hoveredUnknown ? 'scale(1.02)' : 'scale(1)',
-                                transition: 'all 0.3s ease'
-                            }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 10 }}>
-                                <div style={{ backgroundColor: 'rgba(212,175,55,0.2)', padding: '8px', borderRadius: '8px', color: THEME.accent }}>
-                                    <GraduationCap size={20} />
-                                </div>
-                                <div>
-                                    <h4 style={{ color: THEME.accent, fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px' }}>I don't know how to play</h4>
-                                    <p style={{ color: '#94A3B8', fontSize: '10px' }}>Learn the rules in our Academy</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={16} style={{ color: '#64748B', position: 'relative', zIndex: 10 }} />
+                            <HelpCircle size={12} />
+                            <span>I don't know how to play</span>
                         </div>
-
-                        {/* 1. GAME TYPE SWITCHER */}
-                        <div>
-                            <label style={styles.label}>
-                                <Target size={14} style={{ color: THEME.accent }} /> Game Type
-                            </label>
-                            <div style={{ display: 'flex', backgroundColor: '#0B0E14', padding: '4px', borderRadius: '8px', border: `1px solid ${THEME.panelBorder}` }}>
-                                <button
-                                    onClick={() => setGameMode('standard')}
-                                    style={{ flex: 1, padding: '10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameMode === 'standard' ? THEME.accent : 'transparent', color: gameMode === 'standard' ? 'black' : '#64748B', boxShadow: gameMode === 'standard' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
-                                >
-                                    Standard
-                                </button>
-                                <button
-                                    onClick={() => setGameMode('960')}
-                                    style={{ flex: 1, padding: '10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameMode === '960' ? '#E2E8F0' : 'transparent', color: gameMode === '960' ? 'black' : '#64748B', boxShadow: gameMode === '960' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
-                                >
-                                    Chess 960
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 2. OPPONENT SELECTOR */}
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                <label style={{ ...styles.label, marginBottom: 0 }}>
-                                    <Sword size={14} style={{ color: THEME.accent }} /> Difficulty
-                                </label>
-                                <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold', backgroundColor: '#1A1E26', padding: '2px 8px', borderRadius: '4px', border: `1px solid ${THEME.panelBorder}` }}>{activeBot.name}</span>
-                            </div>
-
-                            {/* Slider */}
-                            <div style={{ padding: '0 4px', marginBottom: '16px' }}>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max={BOTS.length - 1}
-                                    step="1"
-                                    value={selectedBotIndex}
-                                    onChange={(e) => setSelectedBotIndex(parseInt(e.target.value))}
-                                    style={{ width: '100%', height: '8px', backgroundColor: '#2A303C', borderRadius: '8px', appearance: 'none', cursor: 'pointer', accentColor: THEME.accent }}
-                                />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '9px', color: '#64748B', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    <span>Easy</span>
-                                    <span>Medium</span>
-                                    <span>Hard</span>
-                                </div>
-                            </div>
-
-                            {/* Compact Bot Info */}
-                            <div style={{ backgroundColor: '#0B0E14', border: `1px solid ${THEME.panelBorder}`, borderRadius: '8px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#1A1E26', color: THEME.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${THEME.panelBorder}` }}>
-                                    {activeBot.icon}
-                                </div>
-                                <p style={{ color: '#94A3B8', fontSize: '12px', lineHeight: 1.4, margin: 0 }}>{activeBot.desc}</p>
-                            </div>
-                        </div>
-
-                        {/* 3. TIME CONTROL (Expanded Accordion) */}
-                        <div ref={timeSectionRef}>
-                            <label style={styles.label}>
-                                <Clock size={14} style={{ color: THEME.accent }} /> Time Control
-                            </label>
-
-                            {/* Default/Selected Display (Collapsible Header) */}
-                            <div
-                                onClick={() => setIsTimeExpanded(!isTimeExpanded)}
-                                style={{ backgroundColor: '#1A1E26', border: `1px solid ${THEME.panelBorder}`, borderRadius: '8px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: '8px' }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ backgroundColor: 'rgba(212,175,55,0.1)', padding: '6px', borderRadius: '4px', color: THEME.accent }}>
-                                        <Clock size={16} />
-                                    </div>
-                                    <div>
-                                        <span style={{ display: 'block', color: 'white', fontSize: '14px', fontWeight: 'bold' }}>{getSelectedTimeLabel()}</span>
-                                        <span style={{ display: 'block', color: '#64748B', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Selected</span>
-                                    </div>
-                                </div>
-                                <ChevronDown size={16} style={{ color: '#64748B', transform: isTimeExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                            </div>
-
-                            {/* Expanded Options */}
-                            {isTimeExpanded && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '8px' }}>
-                                    {/* Bullet */}
-                                    <div>
-                                        <p style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}><Flame size={10} color="#F87171" /> Bullet</p>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                            {TIME_CATEGORIES.bullet.map(t => (
-                                                <button key={t.val} onClick={() => { setSelectedTime(t.val); }} style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${selectedTime === t.val ? THEME.accent : '#2A303C'}`, backgroundColor: selectedTime === t.val ? THEME.accent : '#0B0E14', color: selectedTime === t.val ? 'black' : '#94A3B8', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.15s' }}>{t.label}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    {/* Blitz */}
-                                    <div>
-                                        <p style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}><Rabbit size={10} color="#FBBF24" /> Blitz</p>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                            {TIME_CATEGORIES.blitz.map(t => (
-                                                <button key={t.val} onClick={() => { setSelectedTime(t.val); }} style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${selectedTime === t.val ? THEME.accent : '#2A303C'}`, backgroundColor: selectedTime === t.val ? THEME.accent : '#0B0E14', color: selectedTime === t.val ? 'black' : '#94A3B8', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.15s' }}>{t.label}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    {/* Rapid */}
-                                    <div>
-                                        <p style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={10} color="#34D399" /> Rapid</p>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                            {TIME_CATEGORIES.rapid.map(t => (
-                                                <button key={t.val} onClick={() => { setSelectedTime(t.val); }} style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${selectedTime === t.val ? THEME.accent : '#2A303C'}`, backgroundColor: selectedTime === t.val ? THEME.accent : '#0B0E14', color: selectedTime === t.val ? 'black' : '#94A3B8', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.15s' }}>{t.label}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Custom */}
-                                    <div style={{ borderTop: '1px solid #2A303C', paddingTop: '12px' }}>
-                                        <button
-                                            onClick={() => setSelectedTime('custom')}
-                                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '4px', border: `1px solid ${selectedTime === 'custom' ? THEME.accent : '#2A303C'}`, backgroundColor: selectedTime === 'custom' ? THEME.accent : '#0B0E14', color: selectedTime === 'custom' ? 'black' : '#94A3B8', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', transition: 'all 0.15s', marginBottom: '12px' }}
-                                        >
-                                            <Settings size={14} /> Custom Time
-                                        </button>
-
-                                        {selectedTime === 'custom' && (
-                                            <div style={{ display: 'flex', gap: '12px' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ fontSize: '9px', color: '#64748B', textTransform: 'uppercase', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Minutes</label>
-                                                    <input
-                                                        type="number" min="1" max="180"
-                                                        value={customTimeState.min}
-                                                        onChange={(e) => setCustomTimeState({ ...customTimeState, min: e.target.value })}
-                                                        style={{ width: '100%', backgroundColor: '#1A1E26', border: '1px solid #2A303C', borderRadius: '4px', padding: '8px', color: 'white', fontSize: '14px', fontFamily: 'monospace', textAlign: 'center' }}
-                                                    />
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ fontSize: '9px', color: '#64748B', textTransform: 'uppercase', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Increment</label>
-                                                    <input
-                                                        type="number" min="0" max="60"
-                                                        value={customTimeState.inc}
-                                                        onChange={(e) => setCustomTimeState({ ...customTimeState, inc: e.target.value })}
-                                                        style={{ width: '100%', backgroundColor: '#1A1E26', border: '1px solid #2A303C', borderRadius: '4px', padding: '8px', color: 'white', fontSize: '14px', fontFamily: 'monospace', textAlign: 'center' }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 4. COLOR SELECTION */}
-                        <div>
-                            <label style={{ ...styles.label, marginBottom: '16px' }}>
-                                <Dna size={14} style={{ color: THEME.accent }} /> Play As (Selected: {selectedColor})
-                            </label>
-                            <div style={{ display: 'flex', backgroundColor: '#0B0E14', padding: '4px', borderRadius: '12px', border: `1px solid ${THEME.panelBorder}` }}>
-                                <button
-                                    onClick={() => setSelectedColor('w')}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'w' ? '#E2E8F0' : 'transparent', color: selectedColor === 'w' ? 'black' : '#64748B', boxShadow: selectedColor === 'w' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
-                                >
-                                    White
-                                </button>
-                                <button
-                                    onClick={() => setSelectedColor('random')}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'random' ? THEME.accent : 'transparent', color: selectedColor === 'random' ? 'black' : '#64748B', boxShadow: selectedColor === 'random' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
-                                >
-                                    Random
-                                </button>
-                                <button
-                                    onClick={() => setSelectedColor('b')}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'b' ? '#1E293B' : 'transparent', color: selectedColor === 'b' ? 'white' : '#64748B', boxShadow: selectedColor === 'b' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
-                                >
-                                    Black
-                                </button>
-                            </div>
-                        </div>
-
                     </div>
-
-                    {/* MOBILE ONLY: START BUTTON */}
-                    {isMobile && (
-                        <div style={{ padding: '24px', borderTop: '1px solid #2A303C', backgroundColor: '#151922', flexShrink: 0 }}>
-                            <button
-                                onClick={handleStartGame}
-                                style={{ ...styles.startGameBtn, marginTop: 0 }}
-                            >
-                                <Play size={20} fill="currentColor" /> Start Game
-                            </button>
-                        </div>
-                    )}
-
                 </div>
+
+                {/* RIGHT PANEL: CONFIGURATION (Desktop Only) */}
+                {/* Simplified or kept for logic - ensuring no DebugConsole here */}
+                {!isMobile && (
+                    <div style={styles.rightPanel}>
+                        <div style={{ padding: '32px', flex: 1, overflowY: 'auto' }}>
+
+                            {/* Section: Guidance */}
+                            <div style={{
+                                backgroundColor: '#1A1E26',
+                                borderRadius: '12px',
+                                padding: '20px',
+                                marginBottom: '32px',
+                                border: `1px solid ${THEME.panelBorder}`
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                    <Rabbit size={24} color={THEME.accent} />
+                                    <div style={{ fontWeight: 'bold', color: 'white' }}>Quick Start</div>
+                                </div>
+                                <p style={{ fontSize: '13px', color: '#94A3B8', lineHeight: 1.6 }}>
+                                    Select your difficulty and time control. For beginners, we recommend <b>Casual</b> difficulty with <b>10 min</b> timer.
+                                </p>
+                            </div>
+
+                            {/* Section: Difficulty Scroller - Visual only since we use Cycle above for main interaction */}
+                            {/* We could duplicate the list here for detailed selection */}
+
+                            {/* Section: Time Control */}
+                            <div style={{ marginBottom: '32px' }} ref={timeSectionRef}>
+                                <div style={styles.label}>
+                                    <Clock size={14} /> Time Control
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                    {ALL_TIME_OPTS.slice(0, 6).map((opt) => (
+                                        <button
+                                            key={opt.val}
+                                            onClick={() => setSelectedTime(opt.val)}
+                                            style={{
+                                                padding: '12px 0',
+                                                backgroundColor: selectedTime === opt.val ? THEME.accent : '#151922',
+                                                color: selectedTime === opt.val ? '#0f172a' : '#94A3B8',
+                                                fontWeight: 'bold',
+                                                border: `1px solid ${selectedTime === opt.val ? THEME.accent : THEME.panelBorder}`,
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontSize: '13px'
+                                            }}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Section: Game Type */}
+                            <div style={{ marginBottom: '32px' }}>
+                                <div style={styles.label}>
+                                    <LayoutGrid size={14} /> Game Type
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px', backgroundColor: '#151922', padding: '4px', borderRadius: '12px', border: `1px solid ${THEME.panelBorder}` }}>
+                                    <button
+                                        onClick={() => setGameMode('standard')}
+                                        style={{
+                                            flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px',
+                                            backgroundColor: gameMode === 'standard' ? '#1A1E26' : 'transparent',
+                                            color: gameMode === 'standard' ? 'white' : '#64748B',
+                                            boxShadow: gameMode === 'standard' ? '0 2px 10px rgba(0,0,0,0.2)' : 'none'
+                                        }}
+                                    >
+                                        STANDARD
+                                    </button>
+                                    <button
+                                        onClick={() => setGameMode('960')}
+                                        style={{
+                                            flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px',
+                                            backgroundColor: gameMode === '960' ? '#1A1E26' : 'transparent',
+                                            color: gameMode === '960' ? 'white' : '#64748B',
+                                            boxShadow: gameMode === '960' ? '0 2px 10px rgba(0,0,0,0.2)' : 'none',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                                        }}
+                                    >
+                                        CHESS 960 <span style={{ fontSize: '9px', backgroundColor: THEME.accent, color: 'black', padding: '1px 4px', borderRadius: '4px' }}>NEW</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '32px', borderTop: `1px solid ${THEME.panelBorder}` }}>
+                                <Settings size={14} color="#64748B" />
+                                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                                    Game settings will be saved for your next session.
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
+                )}
             </div>
 
+            <style>{`
+                @keyframes pulse {
+                    0% { transform: scale(1); opacity: 0.3; }
+                    50% { transform: scale(1.1); opacity: 0.1; }
+                    100% { transform: scale(1); opacity: 0.3; }
+                }
+            `}</style>
         </div>
     );
 }

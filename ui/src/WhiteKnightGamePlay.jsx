@@ -5,7 +5,6 @@ import {
     List, Menu
 } from 'lucide-react';
 import ChessBoard from './components/ChessBoard.jsx';
-import DebugConsole from './components/DebugConsole.jsx';
 import { useChessGame } from './hooks/useChessGame.js';
 import { formatTime } from './utils/timeFormat.js';
 
@@ -176,7 +175,22 @@ const styles = {
     }
 };
 
-// --- COUNTDOWN COMPONENT ---
+// --- COMPONENTS ---
+
+// 1. ClockDisplay Component (Memoized for performance)
+const ClockDisplay = React.memo(({ time, isActive }) => {
+    const isLow = time < 30;
+    return (
+        <div style={styles.clock(isActive, isLow)}>
+            <Clock size={18} color={isActive ? (isLow ? '#EF4444' : '#D4AF37') : '#64748B'} />
+            <span style={styles.clockTime(isActive, isLow)}>
+                {formatTime(Math.max(0, time || 0))}
+            </span>
+        </div>
+    );
+});
+
+// 2. Countdown Component
 const GameStartCountdown = ({ onComplete }) => {
     const [count, setCount] = useState(3);
     const [showStart, setShowStart] = useState(false);
@@ -188,7 +202,6 @@ const GameStartCountdown = ({ onComplete }) => {
         } else {
             setShowStart(true);
             const timer = setTimeout(() => {
-                console.log('[Countdown] Calling onComplete callback...');
                 onComplete();
             }, 800);
             return () => clearTimeout(timer);
@@ -224,6 +237,7 @@ const GameStartCountdown = ({ onComplete }) => {
     );
 };
 
+// --- MAIN COMPONENT ---
 export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
     // --- STATE ---
     const {
@@ -240,11 +254,10 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
     const playerColor = useMemo(() => {
         const colorSetting = settings?.color;
         if (colorSetting === 'random') return Math.random() > 0.5 ? 'w' : 'b';
-        // Input is already 'w' or 'b', no conversion needed
         return colorSetting === 'b' ? 'b' : 'w';
     }, [settings?.color]);
 
-    // Shim for wp.i18n
+    // Shim for wp.i18n (Redundant backup)
     useEffect(() => {
         if (typeof window !== 'undefined') {
             window.wp = window.wp || {};
@@ -253,6 +266,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                     __: (s) => s,
                     _x: (s) => s,
                     _n: (s) => s,
+                    _nx: (s) => s,
                     sprintf: (s) => s
                 };
             }
@@ -268,7 +282,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
     }, [playerColor]);
 
     // --- LAZY STATE INITIALIZATION ---
-    // Avoids race conditions and "default white" flashes
+    // Avoids race conditions
 
     const [boardOrientation, setBoardOrientation] = useState(() => {
         // react-chessboard uses 'white'/'black' for orientation prop
@@ -277,12 +291,12 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
 
     const [whiteTime, setWhiteTime] = useState(() => {
         const tc = settings?.timeControl || '10+0';
-        return parseInt(tc.split('+')[0]) * 60;
+        return parseInt(String(tc).split('+')[0]) * 60;
     });
 
     const [blackTime, setBlackTime] = useState(() => {
         const tc = settings?.timeControl || '10+0';
-        return parseInt(tc.split('+')[0]) * 60;
+        return parseInt(String(tc).split('+')[0]) * 60;
     });
 
     const [clocks, setClocks] = useState(() => ({ w: whiteTime, b: blackTime }));
@@ -298,19 +312,22 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
     const moveListRef = useRef(null);
     const hasGameEndedRef = useRef(false);
 
-    // Bot Info
-    const botInfo = settings?.bot || { name: 'Casual', rating: 1200 };
+    // Bot Info - Safe extraction
+    const botInfo = useMemo(() => {
+        const bot = settings?.bot || {};
+        // Ensure strictly primitive strings
+        return {
+            name: String(bot.name || 'Casual'),
+            rating: String(bot.rating || '1200')
+        };
+    }, [settings?.bot]);
 
-    // Cleanup: We removed the unstable useEffect that was setting orientation via setTimeout.
-    // Initialization is now handled lazily above.
-
-    // 2. Countdown Completion - NOW we start the game
+    // Countdown Completion - Start Game
     const handleCountdownComplete = useCallback(() => {
         console.log('[LiveGame] handleCountdownComplete called, gameInitializedRef:', gameInitializedRef.current);
         if (!gameInitializedRef.current) {
             gameInitializedRef.current = true;
             const tc = settings?.timeControl || '10+0';
-            console.log('[LiveGame] Starting game with:', { botLevel: botInfo.name, playerColor, tc });
             startGame({
                 botLevel: botInfo.name.toLowerCase(),
                 playerColor: playerColor,
@@ -318,10 +335,9 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
             });
         }
         setGameStarted(true);
-        console.log('[LiveGame] gameStarted set to true');
     }, [settings, startGame, botInfo, playerColor]);
 
-    // 3. Timer Logic & Timeout Check
+    // Timer Logic
     useEffect(() => {
         if (!gameStarted || gameState?.isGameOver || gameState?.gameOver) return;
 
@@ -333,10 +349,8 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                 // Local Timeout detection
                 if (newTime === 0) {
                     clearInterval(timer);
-                    // Force game over state locally to trigger end effect
                     if (onGameEnd) {
-                        const result = turn === 'w' ? 'black_won_timeout' : 'white_won_timeout'; // simplified result code
-                        // We defer this slightly to ensure render cycle updates
+                        const result = turn === 'w' ? 'black_won_timeout' : 'white_won_timeout';
                         setTimeout(() => {
                             stopClock();
                             onGameEnd({
@@ -358,41 +372,32 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
         return () => clearInterval(timer);
     }, [gameStarted, gameState?.turn, gameState?.isGameOver, gameState?.gameOver, onGameEnd, stopClock]);
 
-    // 4. Handle Game Over & Resign Fix
-    // Monitor Game Over status (Checkmate, Stalemate, OR Resign/Timeout)
+    // Handle Game Over
     useEffect(() => {
-        const isEngineGameOver = gameState?.gameOver; // From Resign/Timeout
-        const isBoardGameOver = gameState?.isGameOver; // From Checkmate/Draw
-
-        // Only log when there's a game over event (reduce spam)
-        if (isEngineGameOver || isBoardGameOver) {
-            console.log('[LiveGame] Game Over check:', { isEngineGameOver, isBoardGameOver, hasEnded: hasGameEndedRef.current });
-        }
+        const isEngineGameOver = gameState?.gameOver;
+        const isBoardGameOver = gameState?.isGameOver;
 
         if ((isEngineGameOver || isBoardGameOver) && !hasGameEndedRef.current) {
-            console.log('[LiveGame] Game Over detected! Triggering onGameEnd...');
             hasGameEndedRef.current = true;
             stopClock();
 
-            // Delay slightly to show the move
             setTimeout(() => {
                 if (onGameEnd) {
                     const gameEndData = {
                         fen: gameState.fen,
                         moves: gameState.moves || [],
-                        result: gameState.gameOver || (isBoardGameOver ? { result: 'draw', reason: 'repetition' } : null), // Fallback
+                        result: gameState.gameOver || (isBoardGameOver ? { result: 'draw', reason: 'repetition' } : null),
                         playerColor: gameState.playerColor,
                         moveCount: Math.ceil((gameState.moves?.length || 0) / 2),
-                        clocks: clocks // Use clocks state directly (not currentClocks)
+                        clocks: clocks
                     };
-                    console.log('[LiveGame] Calling onGameEnd with:', gameEndData);
                     onGameEnd(gameEndData);
                 }
             }, 500);
         }
     }, [gameState?.isGameOver, gameState?.gameOver, onGameEnd, stopClock, clocks]);
 
-    // 5. Auto-scroll moves
+    // Auto-scroll moves
     useEffect(() => {
         if (moveListRef.current) {
             moveListRef.current.scrollTop = moveListRef.current.scrollHeight;
@@ -401,53 +406,43 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
 
     // --- ACTIONS ---
     const activeTurn = gameState?.turn || 'w';
-
-    // Use last known clocks to avoid flicker
     const currentClocks = clocks;
 
     const handleMove = useCallback((from, to) => {
         if (!gameStarted) return false;
 
-        console.log('[LiveGame] handleMove called:', { from, to });
-
-        // Optimistic update handled by ChessBoard, real update by makeMove
-        const result = makeMove(from, to, 'q'); // Auto-queen for simplicity in this view
-
-        console.log('[LiveGame] makeMove returned:', result);
-
-        // Critical Fix: check result.valid property. makeMove always returns an object.
-        if (result?.valid === true) {
-            // Position update will happen via useEffect -> onMove callback from engine
-            return true;
-        }
-        return false;
+        const result = makeMove(from, to, 'q');
+        return result?.valid === true;
     }, [gameStarted, makeMove]);
 
     const onResignClick = () => setShowResignConfirm(true);
 
     const onResignConfirm = () => {
-        console.log('[LiveGame] onResignConfirm called');
         setShowResignConfirm(false);
-        resign(); // Calls engine resign
-        console.log('[LiveGame] resign() called, waiting for gameOver state...');
-        // Engine state update will trigger useEffect above
+        resign();
     };
 
     const onOfferDraw = async () => {
         await offerDraw();
     };
 
-    const ClockDisplay = ({ time, isActive }) => {
-        const isLow = time < 30;
-        return (
-            <div style={styles.clock(isActive, isLow)}>
-                <Clock size={18} color={isActive ? (isLow ? '#EF4444' : '#D4AF37') : '#64748B'} />
-                <span style={styles.clockTime(isActive, isLow)}>
-                    {formatTime(time)}
-                </span>
-            </div>
-        );
-    };
+    // --- COMPUTED PROPS ---
+
+    // Check highlight squares safely
+    const highlightSquares = useMemo(() => {
+        if (gameState?.moves && Array.isArray(gameState.moves) && gameState.moves.length > 0) {
+            const lastMove = gameState.moves[gameState.moves.length - 1];
+            if (lastMove && typeof lastMove === 'object') {
+                const f = lastMove.from;
+                const t = lastMove.to;
+                // Strict check to ensure strings
+                if (typeof f === 'string' && typeof t === 'string') {
+                    return [f, t];
+                }
+            }
+        }
+        return [];
+    }, [gameState?.moves]);
 
     // --- RENDER ---
 
@@ -487,7 +482,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={styles.headerTitle}>
                         <div style={styles.liveIndicator}></div>
-                        LIVE GAME v1.9 (Logs Fixed)
+                        LIVE GAME v3.0 (Clean Only)
                     </div>
                     {!isMobile && (
                         <>
@@ -546,9 +541,8 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                                 position={gameState?.fen || 'start'}
                                 orientation={boardOrientation}
                                 onMove={handleMove}
-                                highlightSquares={gameState?.moves?.length > 0 ? [gameState.moves[gameState.moves.length - 1].from, gameState.moves[gameState.moves.length - 1].to] : []}
+                                highlightSquares={highlightSquares}
                                 disabled={!gameStarted || gameState?.isGameOver}
-                                // Ensure we pass 'w' or 'b' explicitly, though ChessBoard now normalizes it too.
                                 playerColor={gameState?.playerColor || playerColorRef.current || 'w'}
                             />
                         </div>
@@ -579,7 +573,6 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                                 <Hand size={16} /> Draw
                             </button>
                             <button onClick={() => {
-                                // Delay flip slightly to avoid chessboard queue conflict
                                 setTimeout(() => {
                                     setBoardOrientation(prev => prev === 'white' ? 'black' : 'white');
                                 }, 50);
@@ -589,21 +582,6 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                         </div>
 
                     </div>
-
-                    {/* Debug Console - Desktop Only (Fixed Position) */}
-                    {!isMobile && (
-                        <div style={{ position: 'fixed', bottom: '16px', left: '16px', width: '400px', maxHeight: '300px', zIndex: 1000, opacity: 0.9 }}>
-                            <DebugConsole
-                                botLevel={botInfo.name}
-                                playerColor={gameState?.playerColor}
-                                gameInfo={{
-                                    moveCount: gameState?.moveHistory?.length || 0,
-                                    currentTurn: activeTurn,
-                                    isGameOver: gameState?.isGameOver
-                                }}
-                            />
-                        </div>
-                    )}
                 </div>
 
                 {/* RIGHT: INFO PANEL (Desktop Only) */}
@@ -621,9 +599,8 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                                 <span>#</span><span>WHITE</span><span>BLACK</span>
                             </div>
 
-                            {gameState?.moves && (function () {
+                            {gameState?.moves && Array.isArray(gameState.moves) && (function () {
                                 const moves = [];
-                                // Use gameState.moves instead of .moveHistory
                                 for (let i = 0; i < gameState.moves.length; i += 2) {
                                     moves.push({
                                         num: (i / 2) + 1,
@@ -631,13 +608,27 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                                         b: gameState.moves[i + 1]
                                     });
                                 }
-                                return moves.map((m, i) => (
-                                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr', fontSize: '14px', fontFamily: 'monospace', color: '#E2E8F0', padding: '8px 0', borderBottom: '1px solid #1A1E26', backgroundColor: i % 2 === 0 ? 'transparent' : '#12141A' }}>
-                                        <span style={{ color: '#64748B', textAlign: 'center', borderRight: '1px solid #2A303C' }}>{m.num}.</span>
-                                        <span style={{ paddingLeft: '16px' }}>{m.w.san || m.w}</span>
-                                        <span style={{ paddingLeft: '16px', borderLeft: '1px solid #2A303C' }}>{m.b?.san || m.b || ''}</span>
-                                    </div>
-                                ));
+                                return moves.map((m, i) => {
+                                    // Helper for safe rendering
+                                    const renderMove = (moveVal) => {
+                                        if (!moveVal) return '';
+                                        if (typeof moveVal === 'string') return moveVal;
+                                        // Ensure we never render an object
+                                        try {
+                                            return String(moveVal.san || '???');
+                                        } catch (e) {
+                                            return '???';
+                                        }
+                                    };
+
+                                    return (
+                                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr', fontSize: '14px', fontFamily: 'monospace', color: '#E2E8F0', padding: '8px 0', borderBottom: '1px solid #1A1E26', backgroundColor: i % 2 === 0 ? 'transparent' : '#12141A' }}>
+                                            <span style={{ color: '#64748B', textAlign: 'center', borderRight: '1px solid #2A303C' }}>{m.num}.</span>
+                                            <span style={{ paddingLeft: '16px' }}>{renderMove(m.w)}</span>
+                                            <span style={{ paddingLeft: '16px', borderLeft: '1px solid #2A303C' }}>{renderMove(m.b)}</span>
+                                        </div>
+                                    );
+                                });
                             })()}
                         </div>
 
@@ -654,47 +645,51 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
 
             {/* MODALS */}
             {/* RESIGN CONFIRM */}
-            {showResignConfirm && (
-                <div style={{ position: 'absolute', inset: 0, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-                    <div style={{ backgroundColor: '#151922', border: `1px solid ${THEME.panelBorder}`, borderRadius: '16px', padding: '32px', maxWidth: '320px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', textAlign: 'center' }}>
-                        <AlertTriangle size={32} color={THEME.accent} style={{ marginBottom: '16px' }} />
-                        <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>Are you sure?</h3>
-                        <p style={{ fontSize: '14px', color: '#94A3B8', marginBottom: '24px', lineHeight: 1.5 }}>
-                            Do you really want to resign the game? This counts as a loss.
-                        </p>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setShowResignConfirm(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `1px solid ${THEME.panelBorder}`, backgroundColor: 'transparent', color: '#94A3B8', fontWeight: 'bold', cursor: 'pointer' }}>
-                                CANCEL
-                            </button>
-                            <button onClick={onResignConfirm} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: THEME.accent, color: 'black', fontWeight: 'bold', cursor: 'pointer' }}>
-                                RESIGN
-                            </button>
+            {
+                showResignConfirm && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                        <div style={{ backgroundColor: '#151922', border: `1px solid ${THEME.panelBorder}`, borderRadius: '16px', padding: '32px', maxWidth: '320px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+                            <AlertTriangle size={32} color={THEME.accent} style={{ marginBottom: '16px' }} />
+                            <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>Are you sure?</h3>
+                            <p style={{ fontSize: '14px', color: '#94A3B8', marginBottom: '24px', lineHeight: 1.5 }}>
+                                Do you really want to resign the game? This counts as a loss.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={() => setShowResignConfirm(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `1px solid ${THEME.panelBorder}`, backgroundColor: 'transparent', color: '#94A3B8', fontWeight: 'bold', cursor: 'pointer' }}>
+                                    CANCEL
+                                </button>
+                                <button onClick={onResignConfirm} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: THEME.accent, color: 'black', fontWeight: 'bold', cursor: 'pointer' }}>
+                                    RESIGN
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* EXIT WARNING */}
-            {showExitWarning && (
-                <div style={{ position: 'absolute', inset: 0, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-                    <div style={{ backgroundColor: '#151922', border: `1px solid ${THEME.panelBorder}`, borderRadius: '16px', padding: '32px', maxWidth: '320px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', textAlign: 'center' }}>
-                        <AlertTriangle size={32} color="#EF4444" style={{ marginBottom: '16px' }} />
-                        <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>Game in Progress</h3>
-                        <p style={{ fontSize: '14px', color: '#94A3B8', marginBottom: '24px', lineHeight: 1.5 }}>
-                            The game will continue in background. You might lose on time.
-                        </p>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setShowExitWarning(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `1px solid ${THEME.panelBorder}`, backgroundColor: 'transparent', color: '#94A3B8', fontWeight: 'bold', cursor: 'pointer' }}>
-                                STAY
-                            </button>
-                            <button onClick={() => { setShowExitWarning(false); window.location.reload(); }} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#EF4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>
-                                LEAVE
-                            </button>
+            {
+                showExitWarning && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                        <div style={{ backgroundColor: '#151922', border: `1px solid ${THEME.panelBorder}`, borderRadius: '16px', padding: '32px', maxWidth: '320px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+                            <AlertTriangle size={32} color="#EF4444" style={{ marginBottom: '16px' }} />
+                            <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>Game in Progress</h3>
+                            <p style={{ fontSize: '14px', color: '#94A3B8', marginBottom: '24px', lineHeight: 1.5 }}>
+                                The game will continue in background. You might lose on time.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={() => setShowExitWarning(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `1px solid ${THEME.panelBorder}`, backgroundColor: 'transparent', color: '#94A3B8', fontWeight: 'bold', cursor: 'pointer' }}>
+                                    STAY
+                                </button>
+                                <button onClick={() => { setShowExitWarning(false); window.location.reload(); }} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#EF4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>
+                                    LEAVE
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-        </div>
+        </div >
     );
 }
