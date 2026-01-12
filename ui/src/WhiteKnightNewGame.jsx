@@ -335,7 +335,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                 gap: '20px',
                 flexShrink: 0
             }}>
-                <div style={{ color: 'red', fontWeight: 'bold' }}>🐞 DEBUG BOARD (v1.15)</div>
+                <div style={{ color: 'red', fontWeight: 'bold' }}>🐞 DEBUG BOARD (v1.16 - API FIXED)</div>
                 <div style={{ width: '200px', height: '200px', pointerEvents: 'auto', isolation: 'isolate' }}>
                     <Chessboard
                         position={testGame.fen()}

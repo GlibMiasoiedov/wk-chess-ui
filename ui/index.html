@@ -7,6 +7,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cm-chessboard@8/assets/styles/cm-chessboard.css" />
   <title>WK Chess</title>
+  <script>
+    window.wp = window.wp || {};
+    window.wp.i18n = window.wp.i18n || {
+      __: function(text, domain) { return text; },
+      _x: function(text, context, domain) { return text; },
+      _n: function(single, plural, number, domain) { return number === 1 ? single : plural; },
+      _nx: function(single, plural, number, context, domain) { return number === 1 ? single : plural; },
+      sprintf: function(format, ...args) { return format; }, // Basic placeholder
+      isRTL: function() { return false; }
+    };
+    console.log('[WK-UI] wp.i18n shim injected via HTML');
+  </script>
 </head>
 
 <body>
