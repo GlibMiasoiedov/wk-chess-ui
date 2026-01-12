@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Chessboard } from 'react-chessboard';
 
-export default function ChessBoard({
+const ChessBoard = React.memo(function ChessBoardInternal({
     position = 'start',
     orientation = 'white',
     onMove = null,
@@ -168,7 +168,7 @@ export default function ChessBoard({
                 padding: '2px 6px',
                 borderRadius: '4px'
             }}>
-                v1.13 | {normalizedPlayerColor} | r{renderKey}
+                v1.14 (Memo) | {normalizedPlayerColor} | r{renderKey}
             </div>
 
             <Chessboard
@@ -194,4 +194,23 @@ export default function ChessBoard({
             />
         </div>
     );
-}
+}, (prevProps, nextProps) => {
+    // Custom comparison to find what changed
+    const changes = [];
+    Object.keys(nextProps).forEach(key => {
+        if (prevProps[key] !== nextProps[key]) {
+            changes.push(key);
+            // Ignore function references or simple array refs if we want to be strict,
+            // but for now let's just log them.
+        }
+    });
+
+    if (changes.length > 0) {
+        console.log('[ChessBoard] PROPS CHANGED causing render:', changes);
+        return false; // Allow render
+    }
+
+    return true; // Prevent render if no changes
+});
+
+export default ChessBoard;
