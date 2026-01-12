@@ -5,7 +5,7 @@ import {
     List, Menu
 } from 'lucide-react';
 import ChessBoard from './components/ChessBoard.jsx';
-import DebugConsole from './components/DebugConsole.jsx';
+
 
 // DIAGNOSTIC + FALLBACK
 console.log('=== WhiteKnightGamePlay IMPORTS ===');
@@ -14,7 +14,7 @@ console.log('DebugConsole:', typeof DebugConsole, DebugConsole);
 
 // Fallback components if imports failed
 const SafeChessBoard = ChessBoard || (() => <div style={{ color: 'red' }}>ChessBoard UNDEFINED!</div>);
-const SafeDebugConsole = DebugConsole || (() => null);
+const SafeDebugConsole = () => null;
 
 import { useChessGame } from './hooks/useChessGame.js';
 import { formatTime } from './utils/timeFormat.js';

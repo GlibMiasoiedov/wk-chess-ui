@@ -1,211 +1,72 @@
-import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Chessboard } from '../lib/react-chessboard';
-import * as ReactChessboardLib from '../lib/react-chessboard';
-console.log('=== LIBRARY DEBUG ===');
-console.log('All exports:', Object.keys(ReactChessboardLib));
-console.log('Chessboard:', ReactChessboardLib.Chessboard);
-console.log('default:', ReactChessboardLib.default);
 
-export class ErrorBoundary extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = { hasError: false, error: null, errorInfo: null };
-    }
-
-    static getDerivedStateFromError(error) {
-        return { hasError: true };
-    }
-
-    componentDidCatch(error, errorInfo) {
-        this.setState({ error, errorInfo });
-        console.error("ChessBoard ErrorBoundary caught an error:", error, errorInfo);
-    }
-
-    render() {
-        if (this.state.hasError) {
-            return (
-                <div style={{ color: '#EF4444', padding: '20px', backgroundColor: '#1A1E26', borderRadius: '8px', border: '1px solid #EF4444' }}>
-                    <h3 style={{ margin: '0 0 10px 0' }}>ChessBoard Crashed</h3>
-                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748B' }}>v1.29</span>
-                    <pre style={{ fontSize: '12px', overflow: 'auto', maxHeight: '200px' }}>
-                        {this.state.error && this.state.error.toString()}
-                        <br />
-                        {this.state.errorInfo && this.state.errorInfo.componentStack}
-                    </pre>
-                </div>
-            );
-        }
-
-        return this.props.children;
-    }
-}
-
-function ChessBoardInternal({
+/**
+ * A simplified wrapper around react-chessboard v5.
+ * Matches the official "Basic Example" pattern.
+ * 
+ * @param {string} position - FEN string
+ * @param {function} onMove - Callback (source, target) => boolean
+ * @param {string} orientation - 'white' or 'black'
+ * @param {number} boardWidth - Optional width in pixels (parent should control size usually)
+ * @param {object} props - Pass-through props for react-chessboard
+ */
+export default function ChessBoard({
     position = 'start',
+    onMove,
     orientation = 'white',
-    onMove = null,
-    disabled = false,
-    playerColor = 'w',
-    highlightSquares = [],
-    allowAllColors = false,
-    style = {},
-    customBoardStyle = {},
-    showMoveHints = false,
-    getValidMoves = null,
     boardWidth,
-    ...rest // Capture all other props
+    playerColor = 'w', // Used for validation if needed, though Strict Mode handles this logic
+    disabled = false,
+    ...rest
 }) {
-    const containerRef = useRef(null);
-    const [containerWidth, setContainerWidth] = useState(400);
-    const [moveHintSquares, setMoveHintSquares] = useState([]);
-    const [currentPosition, setCurrentPosition] = useState(position);
+    // Adapter for onDrop to handle move logic
+    const onPieceDrop = useCallback((sourceSquare, targetSquare, piece) => {
+        // console.log('[ChessBoard] onPieceDrop', { sourceSquare, targetSquare, piece });
 
-    // Sync local state when prop changes
-    useEffect(() => {
-        if (position !== currentPosition) {
-            console.log('[ChessBoard] Prop position changed, syncing:', position);
-            setCurrentPosition(position);
-        }
-    }, [position]);
-
-    // Responsive sizing
-    useEffect(() => {
-        const updateSize = () => {
-            if (containerRef.current) {
-                const { width, height } = containerRef.current.getBoundingClientRect();
-                const size = Math.min(width, height);
-                if (size > 0) setContainerWidth(size);
+        // v5 signature check: if first arg is object extraction
+        if (typeof sourceSquare === 'object' && sourceSquare.sourceSquare) {
+            const data = sourceSquare;
+            // console.log('[ChessBoard] v5 Drop Data', data);
+            if (onMove) {
+                return onMove(data.sourceSquare, data.targetSquare);
             }
-        };
-        updateSize();
-        const resizeObserver = new ResizeObserver(updateSize);
-        if (containerRef.current) resizeObserver.observe(containerRef.current);
-        return () => resizeObserver.disconnect();
-    }, []);
-
-    const width = boardWidth || containerWidth;
-
-    // Custom square styles
-    const customSquareStyles = useMemo(() => {
-        const styles = {};
-        if (highlightSquares?.length) {
-            highlightSquares.forEach(sq => {
-                if (sq) styles[sq] = { backgroundColor: 'rgba(186, 166, 121, 0.55)' };
-            });
-        }
-        if (moveHintSquares?.length) {
-            moveHintSquares.forEach(sq => {
-                if (sq) {
-                    styles[sq] = {
-                        ...styles[sq],
-                        background: styles[sq]?.backgroundColor
-                            ? `radial-gradient(circle, rgba(0,0,0,0.2) 25%, transparent 25%), ${styles[sq].backgroundColor}`
-                            : 'radial-gradient(circle, rgba(0,0,0,0.2) 25%, transparent 25%)',
-                        backgroundSize: '100% 100%'
-                    };
-                }
-            });
-        }
-        return styles;
-    }, [highlightSquares, moveHintSquares]);
-
-    // Handlers
-    const onPieceDragBegin = useCallback((piece, sourceSquare) => {
-        if (showMoveHints && getValidMoves) {
-            const valid = getValidMoves(sourceSquare);
-            if (valid?.length) setMoveHintSquares(valid);
-        }
-    }, [showMoveHints, getValidMoves]);
-
-    const onPieceDragEnd = useCallback(() => setMoveHintSquares([]), []);
-
-    // FIX v1.28: react-chessboard v5.x onPieceDrop signature handles object
-    const onDrop = useCallback((dropData) => {
-        // Handle both signatures for robustness
-        let sourceSquare, targetSquare, piece;
-
-        if (typeof dropData === 'object' && dropData.sourceSquare) {
-            // v5.x passes single object: { piece, sourceSquare, targetSquare }
-            sourceSquare = dropData.sourceSquare;
-            targetSquare = dropData.targetSquare;
-            piece = dropData.piece;
-        } else {
-            // Fallback for (source, target, piece)
-            sourceSquare = arguments[0];
-            targetSquare = arguments[1];
-            piece = arguments[2];
+            return true;
         }
 
-        console.log('[ChessBoard] onDrop:', { sourceSquare, targetSquare, piece });
-
-        setMoveHintSquares([]);
-
-        if (disabled) return false;
-
-        // Color validation
-        if (!allowAllColors) {
-            const pieceType = typeof piece === 'string' ? piece : piece?.pieceType;
-            const pieceColor = pieceType?.[0]?.toLowerCase(); // 'wP' -> 'w'
-            if (pieceColor && pieceColor !== playerColor) {
-                console.log('[ChessBoard] Move rejected: wrong color', pieceColor, playerColor);
-                return false;
-            }
-        }
-
+        // Standard signature
         if (onMove) {
-            const result = onMove(sourceSquare, targetSquare);
-            if (result === true) return true;
-            if (result === false) return false;
-            if (result?.valid === true) return true;
-            return !!result;
+            return onMove(sourceSquare, targetSquare, piece);
         }
         return true;
-    }, [disabled, allowAllColors, playerColor, onMove]);
+    }, [onMove]);
 
-    const isDraggablePiece = useCallback(({ piece }) => {
-        if (disabled) return false;
-        if (allowAllColors) return true;
-        const pieceColor = piece?.[0]?.toLowerCase();
-        return pieceColor === playerColor;
-    }, [disabled, allowAllColors, playerColor]);
-
-    const boardId = useMemo(() => `board-${Math.random().toString(36).substring(2, 9)}`, []);
+    // Simple container style - let parent control size
+    const containerStyle = useMemo(() => ({
+        width: boardWidth ? `${boardWidth}px` : '100%',
+        height: boardWidth ? `${boardWidth}px` : '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+    }), [boardWidth]);
 
     return (
-        <div ref={containerRef} className="wk-chessboard-container" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
-            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.29</div>
-            {/* FIX: Props passed directly, NOT via options={{}} */}
+        <div className="wk-chessboard-wrapper" style={containerStyle}>
+            <div style={{ position: 'absolute', top: 5, right: 5, color: '#4ADE80', fontSize: '10px', pointerEvents: 'none', zIndex: 10 }}>v1.30</div>
             <Chessboard
-                id={boardId}
-                position={currentPosition}
+                id="WhiteKnightBoard"
+                position={position}
+                onPieceDrop={onPieceDrop}
                 boardOrientation={orientation}
-                onPieceDrop={onDrop}
-                onPieceDragBegin={onPieceDragBegin}
-                onPieceDragEnd={onPieceDragEnd}
-                isDraggablePiece={isDraggablePiece}
-                customSquareStyles={customSquareStyles}
-                customBoardStyle={{
-                    borderRadius: '4px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                    ...customBoardStyle
-                }}
+                boardWidth={boardWidth} // If undefined, library auto-resizes to container
+                arePiecesDraggable={!disabled}
+                animationDuration={200}
                 customDarkSquareStyle={{ backgroundColor: '#779556' }}
                 customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
-                animationDuration={200}
-                arePiecesDraggable={!disabled}
-                showBoardNotation={true}
-                boardWidth={width}
-                // Pass through all other props to enable full v5 capabilities
+                customDropSquareStyle={{ boxShadow: 'inset 0 0 1px 6px rgba(212,175,55,0.4)' }} // Gold ring
+                // Spread all other props (arrows, custom styles, etc.)
                 {...rest}
             />
         </div>
-    );
-}
-
-export default function ChessBoard(props) {
-    return (
-        <ErrorBoundary>
-            <ChessBoardInternal {...props} />
-        </ErrorBoundary>
     );
 }
