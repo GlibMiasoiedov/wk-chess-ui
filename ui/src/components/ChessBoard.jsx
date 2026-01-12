@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Chessboard } from 'react-chessboard';
 
 export default function ChessBoard({
@@ -19,17 +19,15 @@ export default function ChessBoard({
     const [containerWidth, setContainerWidth] = useState(400);
     const [moveHintSquares, setMoveHintSquares] = useState([]);
 
-    // Local override state for instant UI updates
-    const [currentPosition, setCurrentPosition] = useState(position);
-
-    // Sync local state when prop changes (authoritative update from engine)
-    useEffect(() => {
-        // Only update if different (avoid loops, though props should be stable)
-        if (position !== currentPosition) {
-            console.log('[ChessBoard] Prop position changed, syncing:', position);
-            setCurrentPosition(position);
-        }
-    }, [position]);
+    // Normalizing playerColor to 'w' or 'b'
+    // This fixes issues where 'white'/'black' string is passed but 'w'/'b' is expected by piece logic
+    const normalizedPlayerColor = useMemo(() => {
+        if (!playerColor) return 'w';
+        const p = playerColor.toLowerCase();
+        if (p === 'white' || p === 'w') return 'w';
+        if (p === 'black' || p === 'b') return 'b';
+        return 'w';
+    }, [playerColor]);
 
     // Responsive sizing
     useEffect(() => {
@@ -75,53 +73,76 @@ export default function ChessBoard({
     }, [highlightSquares, moveHintSquares]);
 
     // Handlers
-    const onPieceDragBegin = (piece, sourceSquare) => {
+    const onPieceDragBegin = useCallback((piece, sourceSquare) => {
+        console.log('[ChessBoard] onPieceDragBegin:', { piece, sourceSquare, normalizedPlayerColor });
         if (showMoveHints && getValidMoves) {
             const valid = getValidMoves(sourceSquare);
             if (valid?.length) setMoveHintSquares(valid);
         }
-    };
+    }, [showMoveHints, getValidMoves, normalizedPlayerColor]);
 
-    const onPieceDragEnd = () => setMoveHintSquares([]);
-
-    const onDrop = (source, target, piece) => {
+    const onPieceDragEnd = useCallback(() => {
         setMoveHintSquares([]);
-        if (disabled) return false;
+    }, []);
+
+    const onDrop = useCallback((source, target, piece) => {
+        console.log('[ChessBoard] onPieceDrop called:', { source, target, piece, disabled, normalizedPlayerColor });
+        setMoveHintSquares([]);
+
+        if (disabled) {
+            console.log('[ChessBoard] Disabled, returning false');
+            return false;
+        }
 
         // Color validation
         if (!allowAllColors) {
             const pieceColor = piece?.[0]?.toLowerCase();
-            if (pieceColor && pieceColor !== playerColor) return false;
+            if (pieceColor && pieceColor !== normalizedPlayerColor) {
+                console.log('[ChessBoard] Color mismatch. Piece:', pieceColor, 'Player:', normalizedPlayerColor);
+                return false;
+            }
         }
 
         if (onMove) {
-            console.log('[ChessBoard] onPieceDrop -> calling onMove', { source, target });
             const result = onMove(source, target);
-            console.log('[ChessBoard] onMove result:', result);
-            return result !== false;
+            console.log('[ChessBoard] onMove returned:', result);
+
+            // CRITICAL: Must return explicit boolean
+            if (result === true) return true;
+            if (result === false) return false;
+            if (result && typeof result === 'object' && result.valid === true) return true;
+
+            return !!result;
         }
         return true;
-    };
+    }, [disabled, allowAllColors, normalizedPlayerColor, onMove]);
 
-    const isDraggablePiece = ({ piece }) => {
+    const isDraggablePiece = useCallback(({ piece }) => {
         if (disabled) return false;
         if (allowAllColors) return true;
         const pieceColor = piece?.[0]?.toLowerCase();
-        return pieceColor === playerColor;
-    };
+        return pieceColor === normalizedPlayerColor;
+    }, [disabled, allowAllColors, normalizedPlayerColor]);
 
     const boardId = useMemo(() => `board-${Math.random().toString(36).substring(2, 9)}`, []);
 
+    // Workaround for react-chessboard issue: Force re-mount if position changes significantly
+    // We use a simplified key to avoid flashing on every single tiny update, 
+    // but ensures the component resets if the position string completely changes (like 'start' vs fen).
+    const boardKey = useMemo(() => {
+        // We include the position string in the key. 
+        // This is "brutal" but GUARANTEES the board updates visually if props change.
+        return `${boardId}-${orientation}-${typeof position === 'string' ? position : 'obj'}`;
+    }, [boardId, orientation, position]);
+
     return (
         <div ref={containerRef} className="wk-chessboard-container" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
-            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.1 (State)</div>
+            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none', zIndex: 100 }}>v1.2 (Key Remount)</div>
             <Chessboard
                 id={boardId}
+                key={boardKey}
                 boardWidth={width}
-
-                // CRITICAL: Bind to local state, not just prop
-                position={currentPosition}
-
+                position={position}
                 boardOrientation={orientation}
                 onPieceDrop={onDrop}
                 onPieceDragBegin={onPieceDragBegin}
@@ -137,7 +158,6 @@ export default function ChessBoard({
                 customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
                 animationDuration={200}
                 arePiecesDraggable={!disabled}
-                key={`${orientation}-${boardId}`} // Removed 'position' from key to prevent excessive remounts on move
             />
         </div>
     );

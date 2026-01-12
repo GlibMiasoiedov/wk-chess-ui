@@ -495,7 +495,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={styles.headerTitle}>
                         <div style={styles.liveIndicator}></div>
-                        LIVE GAME v1.1
+                        LIVE GAME v1.2
                     </div>
                     {!isMobile && (
                         <>
@@ -556,7 +556,8 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                                 onMove={handleMove}
                                 highlightSquares={gameState?.moves?.length > 0 ? [gameState.moves[gameState.moves.length - 1].from, gameState.moves[gameState.moves.length - 1].to] : []}
                                 disabled={!gameStarted || gameState?.isGameOver}
-                                playerColor={gameState?.playerColor || playerColorRef.current}
+                                // Ensure we pass 'w' or 'b' explicitly, though ChessBoard now normalizes it too.
+                                playerColor={(gameState?.playerColor || playerColorRef.current) === 'white' ? 'w' : (gameState?.playerColor || playerColorRef.current) === 'black' ? 'b' : (gameState?.playerColor || playerColorRef.current)}
                             />
                         </div>
 
