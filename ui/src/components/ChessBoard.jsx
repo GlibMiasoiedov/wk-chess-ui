@@ -19,6 +19,18 @@ export default function ChessBoard({
     const [containerWidth, setContainerWidth] = useState(400);
     const [moveHintSquares, setMoveHintSquares] = useState([]);
 
+    // Local override state for instant UI updates
+    const [currentPosition, setCurrentPosition] = useState(position);
+
+    // Sync local state when prop changes (authoritative update from engine)
+    useEffect(() => {
+        // Only update if different (avoid loops, though props should be stable)
+        if (position !== currentPosition) {
+            console.log('[ChessBoard] Prop position changed, syncing:', position);
+            setCurrentPosition(position);
+        }
+    }, [position]);
+
     // Responsive sizing
     useEffect(() => {
         const updateSize = () => {
@@ -83,7 +95,9 @@ export default function ChessBoard({
         }
 
         if (onMove) {
+            console.log('[ChessBoard] onPieceDrop -> calling onMove', { source, target });
             const result = onMove(source, target);
+            console.log('[ChessBoard] onMove result:', result);
             return result !== false;
         }
         return true;
@@ -100,33 +114,16 @@ export default function ChessBoard({
 
     return (
         <div ref={containerRef} className="wk-chessboard-container" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
-            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v9: RESTORED</div>
+            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.1 (State)</div>
             <Chessboard
                 id={boardId}
                 boardWidth={width}
-                position={position}
+
+                // CRITICAL: Bind to local state, not just prop
+                position={currentPosition}
+
                 boardOrientation={orientation}
-                onPieceDrop={(source, target, piece) => {
-                    // Check disabled
-                    if (disabled) return false;
-
-                    // Check color
-                    if (!allowAllColors) {
-                        const pieceColor = piece?.[0]?.toLowerCase();
-                        if (pieceColor && pieceColor !== playerColor) return false;
-                    }
-
-                    if (onMove) {
-                        // Critical Prop: onPieceDrop MUST return true/false based on Move Validity.
-                        // We rely on parent `onMove` returning true/false.
-                        // Parent MUST execute game logic synchronously or return optimistic true.
-                        console.log('[ChessBoard] onPieceDrop -> calling onMove', { source, target });
-                        const result = onMove(source, target);
-                        console.log('[ChessBoard] onMove result:', result);
-                        return result !== false;
-                    }
-                    return true;
-                }}
+                onPieceDrop={onDrop}
                 onPieceDragBegin={onPieceDragBegin}
                 onPieceDragEnd={onPieceDragEnd}
                 isDraggablePiece={isDraggablePiece}
@@ -140,7 +137,7 @@ export default function ChessBoard({
                 customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
                 animationDuration={200}
                 arePiecesDraggable={!disabled}
-                key={`${orientation}-v8`} // Simplified key, rely on position check
+                key={`${orientation}-${boardId}`} // Removed 'position' from key to prevent excessive remounts on move
             />
         </div>
     );
