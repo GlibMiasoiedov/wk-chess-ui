@@ -416,11 +416,19 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
     const handleMove = useCallback((from, to) => {
         if (!gameStarted) return false;
 
+        console.log('[LiveGame] handleMove called:', { from, to });
+
         // Optimistic update handled by ChessBoard, real update by makeMove
         const result = makeMove(from, to, 'q'); // Auto-queen for simplicity in this view
 
+        console.log('[LiveGame] makeMove returned:', result);
+
         // Critical Fix: check result.valid property. makeMove always returns an object.
-        return result?.valid === true;
+        if (result?.valid === true) {
+            // Position update will happen via useEffect -> onMove callback from engine
+            return true;
+        }
+        return false;
     }, [gameStarted, makeMove]);
 
     const onResignClick = () => setShowResignConfirm(true);

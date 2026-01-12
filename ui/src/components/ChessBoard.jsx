@@ -106,17 +106,41 @@ export default function ChessBoard({
                 boardWidth={width}
                 position={position}
                 boardOrientation={orientation}
-                onPieceDrop={onDrop}
+                onPieceDrop={(source, target, piece) => {
+                    // Check disabled
+                    if (disabled) return false;
+
+                    // Check color
+                    if (!allowAllColors) {
+                        const pieceColor = piece?.[0]?.toLowerCase();
+                        if (pieceColor && pieceColor !== playerColor) return false;
+                    }
+
+                    if (onMove) {
+                        // Critical Prop: onPieceDrop MUST return true/false based on Move Validity.
+                        // We rely on parent `onMove` returning true/false.
+                        // Parent MUST execute game logic synchronously or return optimistic true.
+                        console.log('[ChessBoard] onPieceDrop -> calling onMove', { source, target });
+                        const result = onMove(source, target);
+                        console.log('[ChessBoard] onMove result:', result);
+                        return result !== false;
+                    }
+                    return true;
+                }}
                 onPieceDragBegin={onPieceDragBegin}
                 onPieceDragEnd={onPieceDragEnd}
                 isDraggablePiece={isDraggablePiece}
                 customSquareStyles={customSquareStyles}
-                customBoardStyle={customBoardStyle}
+                customBoardStyle={{
+                    borderRadius: '4px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                    ...customBoardStyle
+                }}
                 customDarkSquareStyle={{ backgroundColor: '#779556' }}
                 customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
                 animationDuration={200}
                 arePiecesDraggable={!disabled}
-                key={`${orientation}-${position}`} // Force Remount on critical changes
+                key={`${orientation}-v8`} // Simplified key, rely on position check
             />
         </div>
     );

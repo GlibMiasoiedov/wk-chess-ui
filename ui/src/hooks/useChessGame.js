@@ -84,7 +84,22 @@ export function useChessGame() {
     // Make a move
     const makeMove = useCallback((from, to, promotion) => {
         if (!engineRef.current) return { valid: false };
-        return engineRef.current.makeMove(from, to, promotion);
+
+        // Critical: React needs to detect a Change. 
+        // engineRef is stable. But we need to update state 'gameState' explicitly.
+        // The engine wrapper handles logic, but we must ensure we get the NEW fen immediately.
+
+        const result = engineRef.current.makeMove(from, to, promotion);
+        // result is { valid: true, ... }
+
+        if (result?.valid) {
+            // Force state update immediately for UI responsiveness
+            // The engine 'onMove' callback handles this usually, but for local moves we want instant feedback.
+            // We can manually trigger a local state shallow update if needed, but the engine callback should be fast enough.
+            console.log('[useChessGame] makeMove valid, waiting for callback...');
+        }
+
+        return result;
     }, []);
 
     // Check if move is legal
