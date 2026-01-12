@@ -487,7 +487,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={styles.headerTitle}>
                         <div style={styles.liveIndicator}></div>
-                        LIVE GAME v1.8
+                        LIVE GAME v1.9 (Logs Fixed)
                     </div>
                     {!isMobile && (
                         <>

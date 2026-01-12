@@ -209,7 +209,7 @@ Time: ${new Date().toISOString()}
                     }}>
                         <strong style={{ color: '#D4AF37' }}>System Info:</strong><br />
                         • Bot Level: <span style={{ color: '#4ADE80' }}>{botLevel}</span><br />
-                        • Player Color: <span style={{ color: '#4ADE80' }}>{playerColor}</span><br />
+                        Color: <span style={{ color: '#FCD34D' }}>{playerColor === 'w' ? 'White' : (playerColor === 'b' ? 'Black' : playerColor)} ({playerColor})</span><br />
                         • Moves: <span style={{ color: '#4ADE80' }}>{gameInfo?.moveCount || 0}</span><br />
                         • Analysis Data: <span style={{ color: gameInfo?.hasAnalysis ? '#4ADE80' : '#EF4444' }}>{gameInfo?.hasAnalysis ? 'Yes' : 'No'}</span>
                     </div>

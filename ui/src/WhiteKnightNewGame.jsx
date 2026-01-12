@@ -78,23 +78,33 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
     // --- HANDLERS ---
 
     const handleStartGame = () => {
-        const finalTime = gameSettings.timeControl === 'custom'
+        const finalTime = selectedTime === 'custom'
             ? `${customTimeState.min}+${customTimeState.inc}`
-            : gameSettings.timeControl;
+            : selectedTime;
+
+        // Ensure color is correct (priority to gameSettings, fallback to selectedColor)
+        const finalColor = gameSettings.color || selectedColor || 'w';
 
         // Construct config object
         const gameConfig = {
             bot: activeBot,
             rating: activeBot.rating,
             timeControl: finalTime,
-            color: gameSettings.color,
-            variant: gameSettings.mode
+            color: finalColor,
+            variant: gameMode
         };
 
-        console.log("🚀 START GAME", gameConfig);
+        console.log("🚀 [NewGame] START PRESSED", JSON.stringify(gameConfig, null, 2));
 
         if (onStartGame) {
-            onStartGame(gameConfig);
+            try {
+                onStartGame(gameConfig);
+                console.log("✅ [NewGame] onStartGame executed successfully");
+            } catch (err) {
+                console.error("❌ [NewGame] Error in onStartGame:", err);
+            }
+        } else {
+            console.error("❌ [NewGame] onStartGame prop is MISSING!");
         }
     };
 
@@ -108,13 +118,25 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
     };
 
     // --- INTERACTIVE SUMMARY HANDLERS ---
-    const cycleDifficulty = () => setSelectedBotIndex((prev) => (prev + 1) % BOTS.length);
-    const cycleSide = () => {
-        const sides = ['white', 'random', 'black'];
-        const currentIndex = sides.indexOf(selectedColor);
-        setSelectedColor(sides[(currentIndex + 1) % sides.length]);
+    // --- INTERACTIVE SUMMARY HANDLERS ---
+    const cycleDifficulty = () => {
+        console.log('[NewGame] Cycling difficulty');
+        setSelectedBotIndex((prev) => (prev + 1) % BOTS.length);
     };
+
+    const cycleSide = () => {
+        const sides = ['w', 'random', 'b']; // Unified format
+        const current = gameSettings.color; // Use gameSettings source of truth
+        const currentIndex = sides.indexOf(current);
+        const next = sides[(currentIndex + 1) % sides.length];
+
+        console.log('[NewGame] Cycling side:', { current, next });
+        setGameSettings(s => ({ ...s, color: next }));
+        setSelectedColor(next); // Keep UI state in sync
+    };
+
     const toggleMode = () => setGameMode(prev => prev === 'standard' ? '960' : 'standard');
+
     const cycleTime = () => {
         const currentIndex = ALL_TIME_OPTS.findIndex(t => t.val === selectedTime);
         if (currentIndex === -1) {
@@ -621,24 +643,33 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         {/* 4. COLOR SELECTION */}
                         <div>
                             <label style={{ ...styles.label, marginBottom: '16px' }}>
-                                <Dna size={14} style={{ color: THEME.accent }} /> Play As
+                                <Dna size={14} style={{ color: THEME.accent }} /> Play As (Selected: {gameSettings.color})
                             </label>
                             <div style={{ display: 'flex', backgroundColor: '#0B0E14', padding: '4px', borderRadius: '12px', border: `1px solid ${THEME.panelBorder}` }}>
                                 <button
-                                    onClick={() => setSelectedColor('w')}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'w' ? '#E2E8F0' : 'transparent', color: selectedColor === 'w' ? 'black' : '#64748B', boxShadow: selectedColor === 'w' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+                                    onClick={() => {
+                                        setGameSettings(s => ({ ...s, color: 'w' }));
+                                        setSelectedColor('w');
+                                    }}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameSettings.color === 'w' ? '#E2E8F0' : 'transparent', color: gameSettings.color === 'w' ? 'black' : '#64748B', boxShadow: gameSettings.color === 'w' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
                                 >
                                     White
                                 </button>
                                 <button
-                                    onClick={() => setSelectedColor('random')}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'random' ? THEME.accent : 'transparent', color: selectedColor === 'random' ? 'black' : '#64748B', boxShadow: selectedColor === 'random' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+                                    onClick={() => {
+                                        setGameSettings(s => ({ ...s, color: 'random' }));
+                                        setSelectedColor('random');
+                                    }}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameSettings.color === 'random' ? THEME.accent : 'transparent', color: gameSettings.color === 'random' ? 'black' : '#64748B', boxShadow: gameSettings.color === 'random' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
                                 >
                                     Random
                                 </button>
                                 <button
-                                    onClick={() => setSelectedColor('black')}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'black' ? '#1E293B' : 'transparent', color: selectedColor === 'black' ? 'white' : '#64748B', boxShadow: selectedColor === 'black' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+                                    onClick={() => {
+                                        setGameSettings(s => ({ ...s, color: 'b' }));
+                                        setSelectedColor('b');
+                                    }}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameSettings.color === 'b' ? '#1E293B' : 'transparent', color: gameSettings.color === 'b' ? 'white' : '#64748B', boxShadow: gameSettings.color === 'b' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
                                 >
                                     Black
                                 </button>
