@@ -14,7 +14,7 @@
     "cm-chessboard": "^8.11.4",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
-    "react-chessboard": "^5.8.6",
+    "react-chessboard": "file:local_modules/react-chessboard-source/react-chessboard-5.8.6",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
