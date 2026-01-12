@@ -82,8 +82,8 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
             ? `${customTimeState.min}+${customTimeState.inc}`
             : selectedTime;
 
-        // Ensure color is correct (priority to gameSettings, fallback to selectedColor)
-        const finalColor = gameSettings.color || selectedColor || 'w';
+        // Ensure color is correct
+        const finalColor = selectedColor || 'w';
 
         // Construct config object
         const gameConfig = {
@@ -126,13 +126,12 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
 
     const cycleSide = () => {
         const sides = ['w', 'random', 'b']; // Unified format
-        const current = gameSettings.color; // Use gameSettings source of truth
+        const current = selectedColor; // Use local state
         const currentIndex = sides.indexOf(current);
         const next = sides[(currentIndex + 1) % sides.length];
 
         console.log('[NewGame] Cycling side:', { current, next });
-        setGameSettings(s => ({ ...s, color: next }));
-        setSelectedColor(next); // Keep UI state in sync
+        setSelectedColor(next);
     };
 
     const toggleMode = () => setGameMode(prev => prev === 'standard' ? '960' : 'standard');
@@ -643,33 +642,24 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         {/* 4. COLOR SELECTION */}
                         <div>
                             <label style={{ ...styles.label, marginBottom: '16px' }}>
-                                <Dna size={14} style={{ color: THEME.accent }} /> Play As (Selected: {gameSettings.color})
+                                <Dna size={14} style={{ color: THEME.accent }} /> Play As (Selected: {selectedColor})
                             </label>
                             <div style={{ display: 'flex', backgroundColor: '#0B0E14', padding: '4px', borderRadius: '12px', border: `1px solid ${THEME.panelBorder}` }}>
                                 <button
-                                    onClick={() => {
-                                        setGameSettings(s => ({ ...s, color: 'w' }));
-                                        setSelectedColor('w');
-                                    }}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameSettings.color === 'w' ? '#E2E8F0' : 'transparent', color: gameSettings.color === 'w' ? 'black' : '#64748B', boxShadow: gameSettings.color === 'w' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+                                    onClick={() => setSelectedColor('w')}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'w' ? '#E2E8F0' : 'transparent', color: selectedColor === 'w' ? 'black' : '#64748B', boxShadow: selectedColor === 'w' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
                                 >
                                     White
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setGameSettings(s => ({ ...s, color: 'random' }));
-                                        setSelectedColor('random');
-                                    }}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameSettings.color === 'random' ? THEME.accent : 'transparent', color: gameSettings.color === 'random' ? 'black' : '#64748B', boxShadow: gameSettings.color === 'random' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+                                    onClick={() => setSelectedColor('random')}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'random' ? THEME.accent : 'transparent', color: selectedColor === 'random' ? 'black' : '#64748B', boxShadow: selectedColor === 'random' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
                                 >
                                     Random
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setGameSettings(s => ({ ...s, color: 'b' }));
-                                        setSelectedColor('b');
-                                    }}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: gameSettings.color === 'b' ? '#1E293B' : 'transparent', color: gameSettings.color === 'b' ? 'white' : '#64748B', boxShadow: gameSettings.color === 'b' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+                                    onClick={() => setSelectedColor('b')}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'b' ? '#1E293B' : 'transparent', color: selectedColor === 'b' ? 'white' : '#64748B', boxShadow: selectedColor === 'b' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
                                 >
                                     Black
                                 </button>
