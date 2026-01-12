@@ -1,38 +1,35 @@
-// ============================================
-// CRITICAL FIX: wp.i18n shim BEFORE React loads
-// Prevents Tutor LMS errors from breaking React
-// ============================================
-if (typeof window !== 'undefined') {
-  window.wp = window.wp || {};
-  if (!window.wp.i18n) {
-    window.wp.i18n = {
-      __: (s) => s,
-      _x: (s) => s,
-      _n: (s) => s,
-      _nx: (s) => s,
-      sprintf: (s, ...args) => s,
-      setLocaleData: () => { },
-      getLocaleData: () => ({}),
-    };
-    console.log('[WK] wp.i18n shim installed');
-  }
-}
-
-import React from "react";
-import ReactDOM from "react-dom/client";
-
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
-const rootEl =
-  document.getElementById("wk-react-root") ||
-  document.getElementById("wk-root") ||
-  document.getElementById("root");
+const MOUNT_POINT_ID = 'white-knight-chess-app';
 
-if (rootEl) {
-  ReactDOM.createRoot(rootEl).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
+const mountApp = () => {
+  const mountPoint = document.getElementById(MOUNT_POINT_ID);
+
+  if (mountPoint) {
+    try {
+      ReactDOM.createRoot(mountPoint).render(
+        <React.StrictMode>
+          <WhiteKnightApp />
+        </React.StrictMode>
+      );
+      console.log("[WK-UI] React App mounted successfully.");
+    } catch (error) {
+      console.error("[WK-UI] React Mount Error:", error);
+      mountPoint.innerHTML = `<div style="color:red; p:20px; text-align:center">Application Error: ${error.message}</div>`;
+    }
+  } else {
+    // Retry if mount point not found yet (common in WP)
+    console.log("[WK-UI] Mount point not found, retrying...");
+    setTimeout(mountApp, 500);
+  }
+};
+
+// Ensure DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mountApp);
+} else {
+  mountApp();
 }
