@@ -6,6 +6,16 @@ import {
 } from 'lucide-react';
 import ChessBoard from './components/ChessBoard.jsx';
 import DebugConsole from './components/DebugConsole.jsx';
+
+// DIAGNOSTIC + FALLBACK
+console.log('=== WhiteKnightGamePlay IMPORTS ===');
+console.log('ChessBoard:', typeof ChessBoard, ChessBoard);
+console.log('DebugConsole:', typeof DebugConsole, DebugConsole);
+
+// Fallback components if imports failed
+const SafeChessBoard = ChessBoard || (() => <div style={{ color: 'red' }}>ChessBoard UNDEFINED!</div>);
+const SafeDebugConsole = DebugConsole || (() => null);
+
 import { useChessGame } from './hooks/useChessGame.js';
 import { formatTime } from './utils/timeFormat.js';
 
@@ -550,13 +560,21 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                             overflow: 'hidden',
                             backgroundColor: '#151922'
                         }}>
-                            <ChessBoard
+                            <SafeChessBoard
                                 position={gameState?.fen || 'start'}
                                 orientation={boardOrientation}
                                 onMove={handleMove}
                                 highlightSquares={gameState?.moves?.length > 0 ? [gameState.moves[gameState.moves.length - 1].from, gameState.moves[gameState.moves.length - 1].to] : []}
                                 disabled={!gameStarted || gameState?.isGameOver}
                                 playerColor={gameState?.playerColor || playerColorRef.current}
+                                // v5 Feature Expansion: Strict Play Mode
+                                allowDrawingArrows={false}
+                                showNotation={true}
+                                animationDuration={300}
+                                disableArrow={true} // Extra safety
+                                allowDragOffBoard={false} // Keep pieces on board
+                                // Premium Styles
+                                dropSquareStyle={{ boxShadow: 'inset 0 0 1px 6px rgba(212,175,55,0.4)' }}
                             />
                         </div>
 
@@ -600,7 +618,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                     {/* Debug Console - Desktop Only (Fixed Position) */}
                     {!isMobile && (
                         <div style={{ position: 'fixed', bottom: '16px', left: '16px', width: '400px', maxHeight: '300px', zIndex: 1000, opacity: 0.9 }}>
-                            <DebugConsole
+                            <SafeDebugConsole
                                 botLevel={botInfo.name}
                                 playerColor={gameState?.playerColor}
                                 gameInfo={{

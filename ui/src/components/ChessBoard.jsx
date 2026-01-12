@@ -1,7 +1,46 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Chessboard } from 'react-chessboard';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import { Chessboard } from '../lib/react-chessboard';
+import * as ReactChessboardLib from '../lib/react-chessboard';
+console.log('=== LIBRARY DEBUG ===');
+console.log('All exports:', Object.keys(ReactChessboardLib));
+console.log('Chessboard:', ReactChessboardLib.Chessboard);
+console.log('default:', ReactChessboardLib.default);
 
-export default function ChessBoard({
+export class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null, errorInfo: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        this.setState({ error, errorInfo });
+        console.error("ChessBoard ErrorBoundary caught an error:", error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div style={{ color: '#EF4444', padding: '20px', backgroundColor: '#1A1E26', borderRadius: '8px', border: '1px solid #EF4444' }}>
+                    <h3 style={{ margin: '0 0 10px 0' }}>ChessBoard Crashed</h3>
+                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748B' }}>v1.29</span>
+                    <pre style={{ fontSize: '12px', overflow: 'auto', maxHeight: '200px' }}>
+                        {this.state.error && this.state.error.toString()}
+                        <br />
+                        {this.state.errorInfo && this.state.errorInfo.componentStack}
+                    </pre>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
+function ChessBoardInternal({
     position = 'start',
     orientation = 'white',
     onMove = null,
@@ -13,18 +52,16 @@ export default function ChessBoard({
     customBoardStyle = {},
     showMoveHints = false,
     getValidMoves = null,
-    boardWidth // passed from parent or calculated locally if missing
+    boardWidth,
+    ...rest // Capture all other props
 }) {
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(400);
     const [moveHintSquares, setMoveHintSquares] = useState([]);
-
-    // Local override state for instant UI updates
     const [currentPosition, setCurrentPosition] = useState(position);
 
-    // Sync local state when prop changes (authoritative update from engine)
+    // Sync local state when prop changes
     useEffect(() => {
-        // Only update if different (avoid loops, though props should be stable)
         if (position !== currentPosition) {
             console.log('[ChessBoard] Prop position changed, syncing:', position);
             setCurrentPosition(position);
@@ -40,17 +77,15 @@ export default function ChessBoard({
                 if (size > 0) setContainerWidth(size);
             }
         };
-
         updateSize();
         const resizeObserver = new ResizeObserver(updateSize);
         if (containerRef.current) resizeObserver.observe(containerRef.current);
         return () => resizeObserver.disconnect();
     }, []);
 
-    // Width to use: prop or calculated
     const width = boardWidth || containerWidth;
 
-    // Generate custom square styles
+    // Custom square styles
     const customSquareStyles = useMemo(() => {
         const styles = {};
         if (highlightSquares?.length) {
@@ -75,53 +110,74 @@ export default function ChessBoard({
     }, [highlightSquares, moveHintSquares]);
 
     // Handlers
-    const onPieceDragBegin = (piece, sourceSquare) => {
+    const onPieceDragBegin = useCallback((piece, sourceSquare) => {
         if (showMoveHints && getValidMoves) {
             const valid = getValidMoves(sourceSquare);
             if (valid?.length) setMoveHintSquares(valid);
         }
-    };
+    }, [showMoveHints, getValidMoves]);
 
-    const onPieceDragEnd = () => setMoveHintSquares([]);
+    const onPieceDragEnd = useCallback(() => setMoveHintSquares([]), []);
 
-    const onDrop = (source, target, piece) => {
+    // FIX v1.28: react-chessboard v5.x onPieceDrop signature handles object
+    const onDrop = useCallback((dropData) => {
+        // Handle both signatures for robustness
+        let sourceSquare, targetSquare, piece;
+
+        if (typeof dropData === 'object' && dropData.sourceSquare) {
+            // v5.x passes single object: { piece, sourceSquare, targetSquare }
+            sourceSquare = dropData.sourceSquare;
+            targetSquare = dropData.targetSquare;
+            piece = dropData.piece;
+        } else {
+            // Fallback for (source, target, piece)
+            sourceSquare = arguments[0];
+            targetSquare = arguments[1];
+            piece = arguments[2];
+        }
+
+        console.log('[ChessBoard] onDrop:', { sourceSquare, targetSquare, piece });
+
         setMoveHintSquares([]);
+
         if (disabled) return false;
 
         // Color validation
         if (!allowAllColors) {
-            const pieceColor = piece?.[0]?.toLowerCase();
-            if (pieceColor && pieceColor !== playerColor) return false;
+            const pieceType = typeof piece === 'string' ? piece : piece?.pieceType;
+            const pieceColor = pieceType?.[0]?.toLowerCase(); // 'wP' -> 'w'
+            if (pieceColor && pieceColor !== playerColor) {
+                console.log('[ChessBoard] Move rejected: wrong color', pieceColor, playerColor);
+                return false;
+            }
         }
 
         if (onMove) {
-            console.log('[ChessBoard] onPieceDrop -> calling onMove', { source, target });
-            const result = onMove(source, target);
-            console.log('[ChessBoard] onMove result:', result);
-            return result !== false;
+            const result = onMove(sourceSquare, targetSquare);
+            if (result === true) return true;
+            if (result === false) return false;
+            if (result?.valid === true) return true;
+            return !!result;
         }
         return true;
-    };
+    }, [disabled, allowAllColors, playerColor, onMove]);
 
-    const isDraggablePiece = ({ piece }) => {
+    const isDraggablePiece = useCallback(({ piece }) => {
         if (disabled) return false;
         if (allowAllColors) return true;
         const pieceColor = piece?.[0]?.toLowerCase();
         return pieceColor === playerColor;
-    };
+    }, [disabled, allowAllColors, playerColor]);
 
     const boardId = useMemo(() => `board-${Math.random().toString(36).substring(2, 9)}`, []);
 
     return (
         <div ref={containerRef} className="wk-chessboard-container" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
-            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.1 (State)</div>
+            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.29</div>
+            {/* FIX: Props passed directly, NOT via options={{}} */}
             <Chessboard
                 id={boardId}
-                boardWidth={width}
-
-                // CRITICAL: Bind to local state, not just prop
                 position={currentPosition}
-
                 boardOrientation={orientation}
                 onPieceDrop={onDrop}
                 onPieceDragBegin={onPieceDragBegin}
@@ -137,8 +193,19 @@ export default function ChessBoard({
                 customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
                 animationDuration={200}
                 arePiecesDraggable={!disabled}
-                key={`${orientation}-${boardId}`} // Removed 'position' from key to prevent excessive remounts on move
+                showBoardNotation={true}
+                boardWidth={width}
+                // Pass through all other props to enable full v5 capabilities
+                {...rest}
             />
         </div>
+    );
+}
+
+export default function ChessBoard(props) {
+    return (
+        <ErrorBoundary>
+            <ChessBoardInternal {...props} />
+        </ErrorBoundary>
     );
 }
