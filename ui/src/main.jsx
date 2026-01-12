@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
-const MOUNT_POINT_ID = 'white-knight-chess-app';
+// Match the ID in wk-chess-ui.php
+const MOUNT_POINT_ID = 'wk-react-root';
 
 const mountApp = () => {
   const mountPoint = document.getElementById(MOUNT_POINT_ID);
@@ -12,7 +13,7 @@ const mountApp = () => {
     try {
       ReactDOM.createRoot(mountPoint).render(
         <React.StrictMode>
-          <WhiteKnightApp />
+          <App />
         </React.StrictMode>
       );
       console.log("[WK-UI] React App mounted successfully.");
