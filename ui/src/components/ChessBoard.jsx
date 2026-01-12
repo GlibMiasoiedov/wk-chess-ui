@@ -19,14 +19,8 @@ export default function ChessBoard({
     const [containerWidth, setContainerWidth] = useState(400);
     const [moveHintSquares, setMoveHintSquares] = useState([]);
 
-    // Normalize playerColor to 'w' or 'b'
-    const normalizedPlayerColor = useMemo(() => {
-        if (!playerColor) return 'w';
-        const p = String(playerColor).toLowerCase();
-        if (p === 'white' || p === 'w') return 'w';
-        if (p === 'black' || p === 'b') return 'b';
-        return 'w';
-    }, [playerColor]);
+    // Expects 'w' or 'b' directly now
+    const normalizedPlayerColor = playerColor;
 
     // Responsive sizing
     useEffect(() => {
@@ -140,7 +134,7 @@ export default function ChessBoard({
                 pointerEvents: 'none',
                 zIndex: 100
             }}>
-                v1.7 (Clean) | {normalizedPlayerColor}
+                v1.8 (Unified 'w'/'b') | {normalizedPlayerColor}
             </div>
 
             {/* DEBUG BUTTON KEPT FOR VERIFICATION */}

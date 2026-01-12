@@ -236,14 +236,43 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
         stopClock
     } = useChessGame();
 
+    // Convert color setting to engine format
+    const playerColor = useMemo(() => {
+        const colorSetting = settings?.color;
+        if (colorSetting === 'random') return Math.random() > 0.5 ? 'w' : 'b';
+        // Input is already 'w' or 'b', no conversion needed
+        return colorSetting === 'b' ? 'b' : 'w';
+    }, [settings?.color]);
+
+    // Shim for wp.i18n
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.wp = window.wp || {};
+            if (!window.wp.i18n) {
+                window.wp.i18n = {
+                    __: (s) => s,
+                    _x: (s) => s,
+                    _n: (s) => s,
+                    sprintf: (s) => s
+                };
+            }
+        }
+    }, []);
+
+    const playerColorRef = useRef(playerColor);
+    const gameInitializedRef = useRef(false);
+
+    // Keep ref in sync
+    useEffect(() => {
+        playerColorRef.current = playerColor;
+    }, [playerColor]);
+
     // --- LAZY STATE INITIALIZATION ---
     // Avoids race conditions and "default white" flashes
 
     const [boardOrientation, setBoardOrientation] = useState(() => {
-        const c = settings?.color;
-        const initial = (c === 'black' || c === 'b') ? 'black' : 'white';
-        console.log('[LiveGame] Lazy Init Orientation:', initial);
-        return initial;
+        // react-chessboard uses 'white'/'black' for orientation prop
+        return playerColor === 'b' ? 'black' : 'white';
     });
 
     const [whiteTime, setWhiteTime] = useState(() => {
@@ -271,37 +300,6 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
 
     // Bot Info
     const botInfo = settings?.bot || { name: 'Casual', rating: 1200 };
-
-    // Convert color setting to engine format
-    const playerColor = useMemo(() => {
-        const colorSetting = settings?.color;
-        if (colorSetting === 'random') return Math.random() > 0.5 ? 'w' : 'b';
-        if (colorSetting === 'black' || colorSetting === 'b') return 'b';
-        return 'w';
-    }, [settings?.color]);
-
-    // Shim for wp.i18n
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            window.wp = window.wp || {};
-            if (!window.wp.i18n) {
-                window.wp.i18n = {
-                    __: (s) => s,
-                    _x: (s) => s,
-                    _n: (s) => s,
-                    sprintf: (s) => s
-                };
-            }
-        }
-    }, []);
-
-    const playerColorRef = useRef(playerColor);
-    const gameInitializedRef = useRef(false);
-
-    // Keep ref in sync
-    useEffect(() => {
-        playerColorRef.current = playerColor;
-    }, [playerColor]);
 
     // Cleanup: We removed the unstable useEffect that was setting orientation via setTimeout.
     // Initialization is now handled lazily above.
@@ -489,7 +487,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={styles.headerTitle}>
                         <div style={styles.liveIndicator}></div>
-                        LIVE GAME v1.7
+                        LIVE GAME v1.8
                     </div>
                     {!isMobile && (
                         <>

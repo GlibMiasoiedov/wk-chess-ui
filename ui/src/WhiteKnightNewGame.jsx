@@ -78,17 +78,17 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
     // --- HANDLERS ---
 
     const handleStartGame = () => {
-        const finalTime = selectedTime === 'custom'
+        const finalTime = gameSettings.timeControl === 'custom'
             ? `${customTimeState.min}+${customTimeState.inc}`
-            : selectedTime;
+            : gameSettings.timeControl;
 
         // Construct config object
         const gameConfig = {
             bot: activeBot,
             rating: activeBot.rating,
             timeControl: finalTime,
-            color: selectedColor,
-            variant: gameMode
+            color: gameSettings.color,
+            variant: gameSettings.mode
         };
 
         console.log("🚀 START GAME", gameConfig);
@@ -625,8 +625,8 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                             </label>
                             <div style={{ display: 'flex', backgroundColor: '#0B0E14', padding: '4px', borderRadius: '12px', border: `1px solid ${THEME.panelBorder}` }}>
                                 <button
-                                    onClick={() => setSelectedColor('white')}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'white' ? '#E2E8F0' : 'transparent', color: selectedColor === 'white' ? 'black' : '#64748B', boxShadow: selectedColor === 'white' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+                                    onClick={() => setSelectedColor('w')}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', border: 'none', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: selectedColor === 'w' ? '#E2E8F0' : 'transparent', color: selectedColor === 'w' ? 'black' : '#64748B', boxShadow: selectedColor === 'w' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
                                 >
                                     White
                                 </button>
