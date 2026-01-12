@@ -236,10 +236,27 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
         stopClock
     } = useChessGame();
 
-    const [boardOrientation, setBoardOrientation] = useState('white');
-    const [whiteTime, setWhiteTime] = useState(settings?.timeControl ? parseInt(settings.timeControl.split('+')[0]) * 60 : 600);
-    const [blackTime, setBlackTime] = useState(settings?.timeControl ? parseInt(settings.timeControl.split('+')[0]) * 60 : 600);
-    const [clocks, setClocks] = useState({ w: whiteTime, b: blackTime });
+    // --- LAZY STATE INITIALIZATION ---
+    // Avoids race conditions and "default white" flashes
+
+    const [boardOrientation, setBoardOrientation] = useState(() => {
+        const c = settings?.color;
+        const initial = (c === 'black' || c === 'b') ? 'black' : 'white';
+        console.log('[LiveGame] Lazy Init Orientation:', initial);
+        return initial;
+    });
+
+    const [whiteTime, setWhiteTime] = useState(() => {
+        const tc = settings?.timeControl || '10+0';
+        return parseInt(tc.split('+')[0]) * 60;
+    });
+
+    const [blackTime, setBlackTime] = useState(() => {
+        const tc = settings?.timeControl || '10+0';
+        return parseInt(tc.split('+')[0]) * 60;
+    });
+
+    const [clocks, setClocks] = useState(() => ({ w: whiteTime, b: blackTime }));
 
     // Countdown state
     const [gameStarted, setGameStarted] = useState(false);
@@ -255,17 +272,15 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
     // Bot Info
     const botInfo = settings?.bot || { name: 'Casual', rating: 1200 };
 
-    // Convert color setting to engine format: 'black'->'b', 'white'->'w', 'random'->random
-    // Convert color setting to engine format: 'black'->'b', 'white'->'w', 'random'->random
+    // Convert color setting to engine format
     const playerColor = useMemo(() => {
         const colorSetting = settings?.color;
-        console.log('[LiveGame] Determining player color from settings:', colorSetting);
         if (colorSetting === 'random') return Math.random() > 0.5 ? 'w' : 'b';
         if (colorSetting === 'black' || colorSetting === 'b') return 'b';
-        return 'w'; // default to white
+        return 'w';
     }, [settings?.color]);
 
-    // Shim for wp.i18n to prevent external script errors (tutor.js)
+    // Shim for wp.i18n
     useEffect(() => {
         if (typeof window !== 'undefined') {
             window.wp = window.wp || {};
@@ -280,9 +295,6 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
         }
     }, []);
 
-    // --- EFFECTS ---
-
-    // Store the computed playerColor in a ref so it doesn't change on re-render
     const playerColorRef = useRef(playerColor);
     const gameInitializedRef = useRef(false);
 
@@ -291,26 +303,8 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
         playerColorRef.current = playerColor;
     }, [playerColor]);
 
-    // 1. Initialize board orientation ONLY (game starts after countdown)
-    useEffect(() => {
-        if (isReady && !gameInitializedRef.current) {
-            // Delay orientation setting to ensure ChessBoard is mounted
-            const timer = setTimeout(() => {
-                const orientation = playerColor === 'b' ? 'black' : 'white';
-                console.log('[LiveGame] Setting initial board orientation:', orientation);
-                setBoardOrientation(orientation);
-            }, 100);
-
-            // Parse initial time for local state
-            const tc = settings?.timeControl || '10+0';
-            const initialSeconds = parseInt(tc.split('+')[0]) * 60;
-            setWhiteTime(initialSeconds);
-            setBlackTime(initialSeconds);
-            setClocks({ w: initialSeconds, b: initialSeconds });
-
-            return () => clearTimeout(timer);
-        }
-    }, [isReady, settings, playerColor]);
+    // Cleanup: We removed the unstable useEffect that was setting orientation via setTimeout.
+    // Initialization is now handled lazily above.
 
     // 2. Countdown Completion - NOW we start the game
     const handleCountdownComplete = useCallback(() => {
@@ -495,7 +489,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={styles.headerTitle}>
                         <div style={styles.liveIndicator}></div>
-                        LIVE GAME v1.2
+                        LIVE GAME v1.7
                     </div>
                     {!isMobile && (
                         <>
@@ -557,7 +551,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                                 highlightSquares={gameState?.moves?.length > 0 ? [gameState.moves[gameState.moves.length - 1].from, gameState.moves[gameState.moves.length - 1].to] : []}
                                 disabled={!gameStarted || gameState?.isGameOver}
                                 // Ensure we pass 'w' or 'b' explicitly, though ChessBoard now normalizes it too.
-                                playerColor={(gameState?.playerColor || playerColorRef.current) === 'white' ? 'w' : (gameState?.playerColor || playerColorRef.current) === 'black' ? 'b' : (gameState?.playerColor || playerColorRef.current)}
+                                playerColor={gameState?.playerColor || playerColorRef.current || 'w'}
                             />
                         </div>
 

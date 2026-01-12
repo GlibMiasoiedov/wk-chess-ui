@@ -13,17 +13,16 @@ export default function ChessBoard({
     customBoardStyle = {},
     showMoveHints = false,
     getValidMoves = null,
-    boardWidth // passed from parent or calculated locally if missing
+    boardWidth
 }) {
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(400);
     const [moveHintSquares, setMoveHintSquares] = useState([]);
 
-    // Normalizing playerColor to 'w' or 'b'
-    // This fixes issues where 'white'/'black' string is passed but 'w'/'b' is expected by piece logic
+    // Normalize playerColor to 'w' or 'b'
     const normalizedPlayerColor = useMemo(() => {
         if (!playerColor) return 'w';
-        const p = playerColor.toLowerCase();
+        const p = String(playerColor).toLowerCase();
         if (p === 'white' || p === 'w') return 'w';
         if (p === 'black' || p === 'b') return 'b';
         return 'w';
@@ -45,10 +44,9 @@ export default function ChessBoard({
         return () => resizeObserver.disconnect();
     }, []);
 
-    // Width to use: prop or calculated
     const width = boardWidth || containerWidth;
 
-    // Generate custom square styles
+    // Custom Styles
     const customSquareStyles = useMemo(() => {
         const styles = {};
         if (highlightSquares?.length) {
@@ -74,46 +72,39 @@ export default function ChessBoard({
 
     // Handlers
     const onPieceDragBegin = useCallback((piece, sourceSquare) => {
-        console.log('[ChessBoard] onPieceDragBegin:', { piece, sourceSquare, normalizedPlayerColor });
         if (showMoveHints && getValidMoves) {
             const valid = getValidMoves(sourceSquare);
             if (valid?.length) setMoveHintSquares(valid);
         }
-    }, [showMoveHints, getValidMoves, normalizedPlayerColor]);
+    }, [showMoveHints, getValidMoves]);
 
     const onPieceDragEnd = useCallback(() => {
         setMoveHintSquares([]);
     }, []);
 
     const onDrop = useCallback((source, target, piece) => {
-        console.log('[ChessBoard] onPieceDrop called:', { source, target, piece, disabled, normalizedPlayerColor });
         setMoveHintSquares([]);
 
-        if (disabled) {
-            console.log('[ChessBoard] Disabled, returning false');
-            return false;
-        }
+        if (disabled) return false;
 
-        // Color validation
+        // Strict Color Validation
         if (!allowAllColors) {
             const pieceColor = piece?.[0]?.toLowerCase();
             if (pieceColor && pieceColor !== normalizedPlayerColor) {
-                console.log('[ChessBoard] Color mismatch. Piece:', pieceColor, 'Player:', normalizedPlayerColor);
                 return false;
             }
         }
 
         if (onMove) {
             const result = onMove(source, target);
-            console.log('[ChessBoard] onMove returned:', result);
-
-            // CRITICAL: Must return explicit boolean
+            // Strict boolean return
             if (result === true) return true;
             if (result === false) return false;
-            if (result && typeof result === 'object' && result.valid === true) return true;
-
+            if (result?.valid === true) return true;
+            if (result?.valid === false) return false;
             return !!result;
         }
+
         return true;
     }, [disabled, allowAllColors, normalizedPlayerColor, onMove]);
 
@@ -124,23 +115,52 @@ export default function ChessBoard({
         return pieceColor === normalizedPlayerColor;
     }, [disabled, allowAllColors, normalizedPlayerColor]);
 
+    // Stable board ID (good practice, but not for forcing resets anymore)
     const boardId = useMemo(() => `board-${Math.random().toString(36).substring(2, 9)}`, []);
 
-    // Workaround for react-chessboard issue: Force re-mount if position changes significantly
-    // We use a simplified key to avoid flashing on every single tiny update, 
-    // but ensures the component resets if the position string completely changes (like 'start' vs fen).
-    const boardKey = useMemo(() => {
-        // We include the position string in the key. 
-        // This is "brutal" but GUARANTEES the board updates visually if props change.
-        return `${boardId}-${orientation}-${typeof position === 'string' ? position : 'obj'}`;
-    }, [boardId, orientation, position]);
-
     return (
-        <div ref={containerRef} className="wk-chessboard-container" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
-            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none', zIndex: 100 }}>v1.2 (Key Remount)</div>
+        <div
+            ref={containerRef}
+            className="wk-chessboard-container"
+            style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                ...style
+            }}
+        >
+            <div style={{
+                position: 'absolute',
+                top: 5,
+                right: 5,
+                color: 'lime',
+                fontSize: '10px',
+                pointerEvents: 'none',
+                zIndex: 100
+            }}>
+                v1.7 (Clean) | {normalizedPlayerColor}
+            </div>
+
+            {/* DEBUG BUTTON KEPT FOR VERIFICATION */}
+            <button
+                onClick={() => {
+                    const info = `Pos: ${typeof position === 'string' ? position : 'Obj'}\nColor: ${normalizedPlayerColor}`;
+                    alert(info);
+                }}
+                style={{
+                    position: 'absolute', top: 5, left: 5, zIndex: 1000,
+                    fontSize: '10px', background: 'rgba(255,0,0,0.5)', color: 'white',
+                    padding: '4px', border: 'none', borderRadius: '4px', pointerEvents: 'auto', cursor: 'pointer'
+                }}
+            >
+                DEBUG
+            </button>
+
             <Chessboard
                 id={boardId}
-                key={boardKey}
+                // REMOVED KEY PROP - relying on library to handle updates!
                 boardWidth={width}
                 position={position}
                 boardOrientation={orientation}
