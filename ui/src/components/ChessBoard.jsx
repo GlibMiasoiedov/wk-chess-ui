@@ -173,7 +173,7 @@ function ChessBoardInternal({
 
     return (
         <div ref={containerRef} className="wk-chessboard-container" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
-            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.29-restore</div>
+            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.28</div>
             {/* FIX: Props passed directly, NOT via options={{}} */}
             <Chessboard
                 id={boardId}
