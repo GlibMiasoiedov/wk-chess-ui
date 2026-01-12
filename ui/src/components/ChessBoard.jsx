@@ -19,7 +19,22 @@ export default function ChessBoard({
     const [containerWidth, setContainerWidth] = useState(400);
     const [moveHintSquares, setMoveHintSquares] = useState([]);
 
-    // Expects 'w' or 'b' directly now
+    // 👇 Counter for force re-render
+    const [renderKey, setRenderKey] = useState(0);
+    const prevPositionRef = useRef(position);
+
+    // 👇 Detect position change and force re-render
+    useEffect(() => {
+        if (position !== prevPositionRef.current) {
+            console.log('[ChessBoard] Position CHANGED!', {
+                from: prevPositionRef.current,
+                to: position
+            });
+            prevPositionRef.current = position;
+            setRenderKey(k => k + 1);
+        }
+    }, [position]);
+
     const normalizedPlayerColor = playerColor;
 
     // Responsive sizing
@@ -77,20 +92,27 @@ export default function ChessBoard({
     }, []);
 
     const onDrop = useCallback((source, target, piece) => {
+        console.log('[ChessBoard] onDrop called:', { source, target, piece });
         setMoveHintSquares([]);
 
-        if (disabled) return false;
+        if (disabled) {
+            console.log('[ChessBoard] REJECTED: disabled');
+            return false;
+        }
 
         // Strict Color Validation
         if (!allowAllColors) {
             const pieceColor = piece?.[0]?.toLowerCase();
             if (pieceColor && pieceColor !== normalizedPlayerColor) {
+                console.log('[ChessBoard] REJECTED: wrong color', { pieceColor, normalizedPlayerColor });
                 return false;
             }
         }
 
         if (onMove) {
             const result = onMove(source, target);
+            console.log('[ChessBoard] onMove result:', result);
+
             // Strict boolean return
             if (result === true) return true;
             if (result === false) return false;
@@ -109,8 +131,17 @@ export default function ChessBoard({
         return pieceColor === normalizedPlayerColor;
     }, [disabled, allowAllColors, normalizedPlayerColor]);
 
-    // Stable board ID (good practice, but not for forcing resets anymore)
+    // Stable board ID
     const boardId = useMemo(() => `board-${Math.random().toString(36).substring(2, 9)}`, []);
+
+    // 👇 Log every render
+    console.log('[ChessBoard] RENDER:', {
+        position: typeof position === 'string' ? position.substring(0, 50) : position,
+        orientation,
+        playerColor: normalizedPlayerColor,
+        renderKey,
+        disabled
+    });
 
     return (
         <div
@@ -132,29 +163,17 @@ export default function ChessBoard({
                 color: 'lime',
                 fontSize: '10px',
                 pointerEvents: 'none',
-                zIndex: 100
+                zIndex: 100,
+                background: 'rgba(0,0,0,0.7)',
+                padding: '2px 6px',
+                borderRadius: '4px'
             }}>
-                v1.8 (Unified 'w'/'b') | {normalizedPlayerColor}
+                v1.13 | {normalizedPlayerColor} | r{renderKey}
             </div>
-
-            {/* DEBUG BUTTON KEPT FOR VERIFICATION */}
-            <button
-                onClick={() => {
-                    const info = `Pos: ${typeof position === 'string' ? position : 'Obj'}\nColor: ${normalizedPlayerColor}`;
-                    alert(info);
-                }}
-                style={{
-                    position: 'absolute', top: 5, left: 5, zIndex: 1000,
-                    fontSize: '10px', background: 'rgba(255,0,0,0.5)', color: 'white',
-                    padding: '4px', border: 'none', borderRadius: '4px', pointerEvents: 'auto', cursor: 'pointer'
-                }}
-            >
-                DEBUG
-            </button>
 
             <Chessboard
                 id={boardId}
-                // REMOVED KEY PROP - relying on library to handle updates!
+                key={`${boardId}-${renderKey}`}
                 boardWidth={width}
                 position={position}
                 boardOrientation={orientation}

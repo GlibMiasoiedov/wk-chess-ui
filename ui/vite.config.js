@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       react: path.resolve(__dirname, "./node_modules/react"),
       "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
+      "react-chessboard": path.resolve(__dirname, "./local_modules/react-chessboard-source/react-chessboard-5.8.6"),
     },
   },
   build: {
