@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Award, Zap, BookOpen, ChevronRight, ChevronLeft,
     AlertTriangle, AlertOctagon,
@@ -281,8 +281,9 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
             // Run analysis with progress callback
             const analysis = await analyzer.analyzeGame(
                 gameData.moves,
-                10, // depth 10 for quick analysis
-                (percent) => setProgress(percent)
+                15, // depth 15 for better quality
+                (percent) => setProgress(percent),
+                isProMode ? 3 : 2 // multiPV: 3 for Pro, 2 for Standard
             );
 
             // Generate statistics

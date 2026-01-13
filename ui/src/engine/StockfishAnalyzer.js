@@ -97,91 +97,111 @@ class StockfishAnalyzer {
         });
     }
 
-    lastEval = null;
-    lastPv = null;
+    lines = {}; // Storage for MultiPV lines: { 1: { eval, pv, bestMove }, 2: { ... } }
+
+    async setOption(name, value) {
+        if (!this.engineReady || !this.engine) return;
+        this.engine.postMessage(`setoption name ${name} value ${value}`);
+    }
 
     parseEvaluation(msg) {
+        // Extract MultiPV ID (default to 1 if missing)
+        const multipvMatch = msg.match(/multipv\s+(\d+)/);
+        const multipvId = multipvMatch ? parseInt(multipvMatch[1]) : 1;
+
         // Extract score
         const cpMatch = msg.match(/score cp (-?\d+)/);
         const mateMatch = msg.match(/score mate (-?\d+)/);
 
         // Determine turn from FEN to normalize to White's perspective
-        // FEN: rnbqk... w KQkq - 0 1
-        // Token 1 is turn (w/b)
         let turn = 'w';
         if (this.currentFen) {
             const parts = this.currentFen.split(' ');
             if (parts.length >= 2) turn = parts[1];
         }
 
-        // Multiplier: If Black to move, engine score is relative to Black.
-        // We want relative to White. So negate if Black.
         const mod = turn === 'b' ? -1 : 1;
+        let evalScore = 0;
 
         if (cpMatch) {
-            // cp 100 = 1 pawn.
-            this.lastEval = (parseInt(cpMatch[1]) * mod) / 100;
+            evalScore = (parseInt(cpMatch[1]) * mod) / 100;
         } else if (mateMatch) {
             const mateIn = parseInt(mateMatch[1]);
-            // Positive mate means side to move wins. 
-            // If turn=b (Black), positive mate means Black wins (-100 for White).
-            // So: (100 * -1) = -100. Correct.
-            this.lastEval = (mateIn > 0 ? 100 : -100) * mod;
+            evalScore = (mateIn > 0 ? 100 : -100) * mod;
         }
 
-        // Extract principal variation (best line)
+        // Extract principal variation
         const pvMatch = msg.match(/pv (.+)/);
-        if (pvMatch) {
-            this.lastPv = pvMatch[1].split(' ');
-        }
+        const pv = pvMatch ? pvMatch[1].split(' ') : [];
+        const bestMove = pv.length > 0 ? pv[0] : null;
+
+        // Store this line
+        this.lines[multipvId] = {
+            id: multipvId,
+            eval: evalScore,
+            pv,
+            bestMove
+        };
     }
 
     handleBestMove(msg) {
-        // Match standard move or (none) for checkmate/stalemate
+        // Match standard move or (none)
         const match = msg.match(/bestmove\s+(\S+)/);
         if (match && this.currentResolve) {
             let bestMove = match[1];
             if (bestMove === '(none)') bestMove = null;
 
-            console.log('[StockfishAnalyzer] Got bestmove:', bestMove, 'eval:', this.lastEval);
+            // Sort lines by MultiPV ID to ensure line 1 is first (best)
+            const variations = Object.values(this.lines).sort((a, b) => a.id - b.id);
+
+            // Primary result is line 1
+            const bestLine = variations[0] || {};
+
+            console.log('[StockfishAnalyzer] Analysis complete. lines:', variations.length);
             this.currentResolve({
-                bestMove,
-                eval: this.lastEval,
-                pv: this.lastPv
+                bestMove: bestMove || bestLine.bestMove,
+                eval: bestLine.eval || 0,
+                pv: bestLine.pv || [],
+                variations: variations
             });
             this.currentResolve = null;
-            this.lastEval = null;
-            this.lastPv = null;
+            this.lines = {};
         }
     }
 
     // Analyze a single position
-    async analyzePosition(fen, depth = 15) {
+    async analyzePosition(fen, depth = 15, multiPV = 1) {
         if (!this.engineReady || !this.engine) {
             console.warn('[StockfishAnalyzer] Engine not ready, returning default eval');
-            return { eval: 0, bestMove: null, pv: [] };
+            return { eval: 0, bestMove: null, pv: [], variations: [] };
         }
-
-        // console.log('[StockfishAnalyzer] Analyzing position:', fen.substring(0, 40) + '...', 'depth:', depth);
 
         // Save FEN for parsing context (perspective normalization)
         this.currentFen = fen;
 
         return new Promise((resolve) => {
             this.currentResolve = resolve;
-            this.lastEval = null;
-            this.lastPv = null;
+            this.lines = {};
 
             this.engine.postMessage('ucinewgame');
+            this.engine.postMessage(`setoption name MultiPV value ${multiPV}`);
             this.engine.postMessage(`position fen ${fen}`);
             this.engine.postMessage(`go depth ${depth}`);
 
             // Timeout - increased to allow more complex positions
             setTimeout(() => {
                 if (this.currentResolve === resolve) {
-                    console.warn('[StockfishAnalyzer] Timeout! No response for position, using lastEval:', this.lastEval);
-                    // Use lastEval if available (partial result), otherwise 0
-                    resolve({ eval: this.lastEval || 0, bestMove: null, pv: [] });
+                    console.warn('[StockfishAnalyzer] Timeout! No response for position');
+                    // Use whatever lines we have
+                    const variations = Object.values(this.lines).sort((a, b) => a.id - b.id);
+                    const bestLine = variations[0] || {};
+
+                    resolve({
+                        eval: bestLine.eval || 0,
+                        bestMove: bestLine.bestMove || null,
+                        pv: bestLine.pv || [],
+                        variations: variations
+                    });
                     this.currentResolve = null;
                 }
             }, 15000);
@@ -190,7 +210,7 @@ class StockfishAnalyzer {
 
 
     // Analyze entire game - returns array of move evaluations
-    async analyzeGame(moves, depth = 15, onProgress = null) {
+    async analyzeGame(moves, depth = 15, onProgress = null, multiPV = 1) {
         const analysis = [];
 
         // We need FEN for each position
@@ -264,10 +284,10 @@ class StockfishAnalyzer {
             }
 
             // Analyze position BEFORE the move to get best move recommendation
-            const beforeResult = await this.analyzePosition(beforeFen, depth);
+            const beforeResult = await this.analyzePosition(beforeFen, depth, multiPV);
 
             // Get position evaluation AFTER the move was made
-            const afterResult = await this.analyzePosition(afterFen, depth);
+            const afterResult = await this.analyzePosition(afterFen, depth, multiPV);
 
             // Eval after the move
             const currentEval = afterResult.eval || 0;
@@ -319,6 +339,7 @@ class StockfishAnalyzer {
                 bestMove: bestMoveUci,
                 bestMoveSan: bestMoveSan,
                 pv: beforeResult.pv,
+                variations: beforeResult.variations || [], // Store all MultiPV lines
                 classification,
                 symbol,
                 isBook: false,

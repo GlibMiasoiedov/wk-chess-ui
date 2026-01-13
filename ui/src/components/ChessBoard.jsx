@@ -51,7 +51,8 @@ function ChessBoardInternal({
     customBoardStyle = {},
     showMoveHints = false,
     getValidMoves = null,
-    boardWidth
+    boardWidth,
+    customArrows = []
 }) {
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(400);
@@ -284,6 +285,7 @@ function ChessBoardInternal({
                 arePiecesDraggable={!disabled}
                 showBoardNotation={true}
                 boardWidth={width}
+                customArrows={customArrows}
             />
         </div>
     );
