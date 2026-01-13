@@ -324,29 +324,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
     return (
         <div style={styles.container}>
 
-            {/* 👇 TEST BOARD OVERLAY (Temporary Debug) */}
-            <div style={{
-                backgroundColor: 'rgba(255,0,0,0.1)',
-                borderBottom: '2px dashed red',
-                padding: '10px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '20px',
-                flexShrink: 0
-            }}>
-                <div style={{ color: 'red', fontWeight: 'bold' }}>🐞 DEBUG BOARD (v1.16 - API FIXED)</div>
-                <div style={{ width: '200px', height: '200px', pointerEvents: 'auto', isolation: 'isolate' }}>
-                    <Chessboard
-                        position={testGame.fen()}
-                        onPieceDrop={onTestDrop}
-                        boardWidth={200}
-                    />
-                </div>
-                <div style={{ fontSize: '10px', color: '#ccc', maxWidth: '200px', overflowWrap: 'break-word' }}>
-                    FEN: {testGame.fen()}
-                </div>
-            </div>
+
 
             {/* --- HEADER --- */}
             <div style={styles.header}>
