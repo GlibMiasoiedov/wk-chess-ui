@@ -71,24 +71,26 @@ const cssStyles = `
   .wk-wrapper, .wk-wrapper * { box-sizing: border-box; }
   
   .wk-wrapper {
-    height: 100vh;
+    height: 100%;
+    width: 100%;
     background-color: var(--wk-bg);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
+    flex-direction: column;
+    /* REMOVED: centering and padding for seamless fit */
     font-family: sans-serif;
+    overflow: hidden;
   }
 
   .wk-panel {
-    width: 500px;
-    height: 95vh;
+    width: 100%;
+    height: 100%;
     background-color: var(--wk-panel);
-    border: 1px solid var(--wk-border);
-    border-radius: 16px;
+    /* REMOVED: Border/Radius/Shadow for seamless sidebar integration */
+    /* border: 1px solid var(--wk-border); */
+    /* border-radius: 16px; */
+    /* box-shadow: ... */
     display: flex;
     flex-direction: column;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
     overflow: hidden;
     position: relative;
   }
@@ -96,10 +98,10 @@ const cssStyles = `
   .wk-scroll-content {
     flex: 1;
     overflow-y: auto;
-    padding: 24px;
+    padding: 20px; /* Reduced from 24px for 350px width */
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px; /* Reduced gap */
     scrollbar-width: thin;
     scrollbar-color: var(--wk-border) var(--wk-bg);
   }
@@ -108,51 +110,52 @@ const cssStyles = `
   .wk-card-profile {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px;
+    gap: 12px; /* Compact gap */
+    padding: 12px; /* Compact padding */
     border-radius: 12px;
     background: linear-gradient(145deg, #1A1E26 0%, #111 100%);
     border: 1px solid var(--wk-border);
   }
 
   .wk-avatar {
-    width: 56px;
-    height: 56px;
+    width: 48px; /* Slightly smaller avatar */
+    height: 48px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--wk-accent) 0%, #B39352 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 20px;
+    font-size: 18px;
     color: #000;
     position: relative;
     box-shadow: var(--wk-shadow-glow);
+    flex-shrink: 0;
   }
 
   .wk-status-dot {
     position: absolute;
     bottom: 0; right: 0;
-    width: 14px; height: 14px;
+    width: 12px; height: 12px;
     background-color: var(--wk-success);
     border: 2px solid #1A1E26;
     border-radius: 50%;
   }
 
   /* 2. Stats Grid */
-  .wk-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .wk-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
   .wk-stat-box {
     background-color: var(--wk-bg);
     border: 1px solid var(--wk-border);
-    padding: 12px;
+    padding: 10px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-height: 90px;
+    min-height: 80px;
     transition: all 0.2s;
   }
   .wk-stat-box:hover {
@@ -162,7 +165,7 @@ const cssStyles = `
 
   .wk-label-mini {
     color: var(--wk-text-muted);
-    font-size: 10px;
+    font-size: 9px;
     text-transform: uppercase;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -172,14 +175,14 @@ const cssStyles = `
   .wk-value-large {
     color: var(--wk-text-main);
     font-family: monospace;
-    font-size: 24px;
+    font-size: 20px; /* Reduced font */
     font-weight: 700;
     line-height: 1.1;
   }
 
   .wk-trend {
     color: var(--wk-success);
-    font-size: 10px;
+    font-size: 9px;
     display: flex;
     align-items: center;
     gap: 2px;
@@ -192,7 +195,7 @@ const cssStyles = `
   /* --- CONNECT ACCOUNTS (Top Bar) --- */
   .wk-connect-bar {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 4px;
     width: 100%;
   }
@@ -202,17 +205,19 @@ const cssStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px; /* Increased gap for better spacing */
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: 800; /* Bolder text */
+    gap: 6px;
+    padding: 8px; /* Compact */
+    border-radius: 6px;
+    font-size: 10px; /* Compact font */
+    font-weight: 800; 
     text-transform: uppercase;
     cursor: pointer;
     transition: all 0.2s;
     border: 1px solid transparent;
     line-height: 1;
     text-align: center;
+    white-space: nowrap; /* Prevent wrap */
+    overflow: hidden; text-overflow: ellipsis;
   }
 
   /* Chess.com Style */
@@ -273,7 +278,7 @@ const cssStyles = `
     border-radius: 16px;
     padding: 24px;
     width: 100%;
-    max-width: 320px;
+    max-width: 300px; /* fit within sidebar */
     box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     position: relative;
     animation: slideUp 0.2s ease-out;
@@ -282,19 +287,19 @@ const cssStyles = `
   .wk-modal-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
   }
-  .wk-modal-title { color: white; font-weight: bold; font-size: 16px; }
+  .wk-modal-title { color: white; font-weight: bold; font-size: 14px; }
   
   .wk-input-group { margin-bottom: 16px; }
-  .wk-input-label { display: block; color: var(--wk-text-muted); font-size: 11px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase; }
+  .wk-input-label { display: block; color: var(--wk-text-muted); font-size: 10px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase; }
   .wk-text-input {
     width: 100%; background: #0B0E14; border: 1px solid var(--wk-border);
-    border-radius: 8px; padding: 10px; color: white; font-size: 14px;
+    border-radius: 8px; padding: 10px; color: white; font-size: 13px;
   }
   .wk-text-input:focus { outline: none; border-color: var(--wk-accent); }
 
   .wk-btn-primary {
     width: 100%; padding: 10px; background: var(--wk-accent); color: black;
-    border: none; border-radius: 8px; font-weight: bold; font-size: 12px;
+    border: none; border-radius: 8px; font-weight: bold; font-size: 11px;
     cursor: pointer; text-transform: uppercase;
   }
   .wk-btn-primary:hover { background: var(--wk-accent-hover); }
@@ -307,7 +312,7 @@ const cssStyles = `
   .wk-awards-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 8px;
   }
 
   .wk-award-item-compact {
@@ -315,7 +320,7 @@ const cssStyles = `
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 14px;
+    padding: 12px;
     border-radius: 10px;
     border: 1px solid var(--wk-border);
     background-color: var(--wk-bg);
@@ -325,8 +330,8 @@ const cssStyles = `
   .wk-award-item-compact:hover { border-color: rgba(212, 175, 55, 0.4); }
   
   .wk-award-icon-box {
-    padding: 10px;
-    border-radius: 8px;
+    padding: 8px;
+    border-radius: 6px;
     background-color: rgba(212, 175, 55, 0.1);
     color: var(--wk-accent);
     margin-bottom: 6px;
@@ -337,8 +342,8 @@ const cssStyles = `
     background: linear-gradient(180deg, #1A1E26 0%, #0F1116 100%);
     border: 1px solid var(--wk-border);
     border-top: 3px solid var(--wk-accent);
-    border-radius: 16px;
-    padding: 24px;
+    border-radius: 12px; /* Reduced Radius */
+    padding: 20px; /* Reduced Padding */
     position: relative;
     overflow: hidden;
     box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3);
@@ -354,14 +359,14 @@ const cssStyles = `
   }
 
   .wk-schedule-header-group {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     position: relative;
     z-index: 10;
   }
 
   .wk-schedule-title {
     color: var(--wk-accent);
-    font-size: 15px;
+    font-size: 13px; /* Smaller */
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -373,29 +378,34 @@ const cssStyles = `
 
   .wk-schedule-subtitle {
     color: var(--wk-text-muted);
-    font-size: 13px; /* Increased font size */
-    margin-left: 26px; 
+    font-size: 11px; 
+    margin-left: 20px; 
     line-height: 1.4;
   }
 
   .wk-cat-tabs {
     display: flex;
-    gap: 6px;
-    margin-bottom: 16px;
+    gap: 4px; /* Compact */
+    margin-bottom: 12px;
     border-bottom: 1px solid var(--wk-border);
-    padding-bottom: 12px;
+    padding-bottom: 10px;
     position: relative; z-index: 10;
+    overflow-x: auto;
+    white-space: nowrap; /* Scrollable if needed */
+    scrollbar-width: none;
   }
+  .wk-cat-tabs::-webkit-scrollbar { display: none; }
+
   .wk-cat-tab {
     background: transparent;
     border: 1px solid transparent;
     color: var(--wk-text-muted);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
     transition: all 0.2s;
   }
   .wk-cat-tab:hover { color: var(--wk-text-main); background: rgba(255,255,255,0.05); }
@@ -407,9 +417,9 @@ const cssStyles = `
 
   .wk-event-row {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     position: relative; z-index: 10;
   }
   
@@ -417,36 +427,37 @@ const cssStyles = `
     text-align: center;
     background-color: var(--wk-bg);
     border: 1px solid var(--wk-border);
-    border-radius: 12px;
-    padding: 12px;
-    min-width: 64px;
+    border-radius: 8px;
+    padding: 10px;
+    min-width: 56px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
   }
   
   .wk-event-info h4 {
     color: var(--wk-text-main);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
-    margin: 0 0 6px 0;
-    line-height: 1.3;
+    margin: 0 0 4px 0;
+    line-height: 1.2;
   }
   
   .wk-event-meta {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     color: var(--wk-text-muted);
-    font-size: 12px;
+    font-size: 11px;
+    flex-wrap: wrap; /* Safety wrap */
   }
 
   .wk-btn-book {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     background-color: var(--wk-accent);
     color: black;
     border: none;
-    border-radius: 8px;
-    font-size: 12px;
+    border-radius: 6px;
+    font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -469,8 +480,8 @@ const cssStyles = `
   .wk-chat-widget {
     background-color: #0F1116;
     border: 1px solid var(--wk-border);
-    border-radius: 12px;
-    padding: 18px; /* Increased padding */
+    border-radius: 10px;
+    padding: 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -484,31 +495,32 @@ const cssStyles = `
     position: absolute; bottom: 0; left: 0; width: 100%; height: 85%;
     background-color: #0F1116;
     border-top: 1px solid var(--wk-accent);
-    border-radius: 20px 20px 0 0;
+    border-radius: 16px 16px 0 0;
     transform: translateY(110%);
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 100;
     display: flex; flex-direction: column;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
   }
   .wk-chat-drawer.open { transform: translateY(0); }
   
   .wk-chat-header {
-    padding: 18px;
+    padding: 16px;
     border-bottom: 1px solid var(--wk-border);
     display: flex; justify-content: space-between; align-items: center;
     background-color: #151922;
-    border-radius: 20px 20px 0 0;
+    border-radius: 16px 16px 0 0;
   }
   
   .wk-chat-body {
-    flex: 1; overflow-y: auto; padding: 20px;
-    display: flex; flex-direction: column; gap: 14px;
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
     background-color: #0B0E14;
   }
   
   .wk-msg { 
-    max-width: 85%; padding: 12px 16px; font-size: 14px; /* Increased font */
-    line-height: 1.5;
+    max-width: 90%; padding: 10px 14px; font-size: 13px; 
+    line-height: 1.4;
   }
   .wk-msg-bot {
     align-self: flex-start; background: #1A1E26; color: var(--wk-text-main);
@@ -520,17 +532,17 @@ const cssStyles = `
   }
 
   .wk-chat-input-area {
-    padding: 18px; background-color: #151922; border-top: 1px solid var(--wk-border);
-    display: flex; gap: 10px;
+    padding: 16px; background-color: #151922; border-top: 1px solid var(--wk-border);
+    display: flex; gap: 8px;
   }
   
   .wk-input {
     flex: 1;
     background-color: #080A0F;
     border: 1px solid var(--wk-border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    font-size: 15px; /* Increased font */
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
     color: white;
     transition: all 0.2s;
   }
@@ -542,9 +554,9 @@ const cssStyles = `
   }
 
   .wk-btn-icon {
-    width: 48px;
+    width: 44px;
     background-color: var(--wk-accent);
-    border-radius: 10px; border: none; color: black;
+    border-radius: 8px; border: none; color: black;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
 `;
