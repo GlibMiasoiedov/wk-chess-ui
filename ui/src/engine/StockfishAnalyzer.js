@@ -58,6 +58,11 @@ class StockfishAnalyzer {
                     const msg = e.data;
                     if (typeof msg !== 'string') return;
 
+                    // Debug: Log all analysis info to debug MultiPV
+                    if (msg.startsWith('info') || msg.startsWith('bestmove')) {
+                        console.log('[Stockfish Raw]', msg);
+                    }
+
                     if (msg === 'uciok' || msg === 'readyok') {
                         this.engineReady = true;
                         resolve(true);

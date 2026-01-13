@@ -1556,6 +1556,8 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
 
                                                 if (!pvSan || pvSan.length === 0) return null;
 
+                                                console.log('[Analysis] Generated Arrows:', pvSan); // Added console.log here
+
                                                 return (
                                                     <div
                                                         style={{
