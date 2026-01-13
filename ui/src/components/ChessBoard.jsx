@@ -117,22 +117,35 @@ function ChessBoardInternal({
         // Visual feedback helper
         const getMoveOptions = (sq) => {
             if (!getValidMoves) {
+                console.log('[ChessBoard] getValidMoves is undefined!');
                 setOptionSquares({});
                 return false;
             }
             const moves = getValidMoves(sq);
+            console.log('[ChessBoard] getMoveOptions for:', sq, 'Moves:', moves);
+
             if (!moves || moves.length === 0) {
                 setOptionSquares({});
                 return false;
             }
 
             const newSquares = {};
-            moves.forEach((moveSq) => {
-                newSquares[moveSq] = {
-                    background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
+            moves.forEach((move) => {
+                // v5 fix: handle both string "e4" and object { to: "e4", ... }
+                const targetSquare = typeof move === 'string' ? move : move.to;
+                const isCapture = typeof move === 'object' && (move.captured || move.flags?.includes('c'));
+
+                newSquares[targetSquare] = {
+                    background: isCapture
+                        ? 'radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)' // Capture hint (large)
+                        : 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)', // Move hint (small)
                     borderRadius: '50%'
                 };
             });
+
+            // Log generated optionSquares keys
+            console.log('[ChessBoard] Generated optionSquares keys:', Object.keys(newSquares));
+
             newSquares[sq] = {
                 background: 'rgba(255, 255, 0, 0.4)'
             };
@@ -179,9 +192,14 @@ function ChessBoardInternal({
             const moves = getValidMoves(sourceSquare);
             if (moves?.length) {
                 const newSquares = {};
-                moves.forEach((moveSq) => {
-                    newSquares[moveSq] = {
-                        background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
+                moves.forEach((move) => {
+                    const targetSquare = typeof move === 'string' ? move : move.to;
+                    const isCapture = typeof move === 'object' && (move.captured || move.flags?.includes('c'));
+
+                    newSquares[targetSquare] = {
+                        background: isCapture
+                            ? 'radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)'
+                            : 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
                         borderRadius: '50%'
                     };
                 });
