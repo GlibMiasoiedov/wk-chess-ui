@@ -1,161 +1,684 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
     Trophy, Calendar, MessageSquare, TrendingUp,
-    Award, CheckCircle2, Zap, User, Star
+    Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
+    Loader2, Video
 } from 'lucide-react';
 
-/* [Integation Instruction]
-   - Uses Tailwind CSS.
-   - Panel width fixed w-[350px] on desktop, hidden on mobile (handled by parent or media queries).
-   - Data sources are mocked for now as placeholders.
+/* [INTEGRATION GUIDE FOR DEVELOPERS]
+   =================================================================================
+   This component serves as the "Command Center" for the user. It aggregates 
+   profile stats, gamification, schedule, and AI assistance.
+
+   1. UPCOMING LIVE LESSONS (Calendar Integration)
+      ------------------------------------------------------------------------------
+      - **API Endpoint:** `https://whiteknight.academy/wp-json/tribe/events/v1/events`
+      - **Method:** GET
+      - **Logic:**
+        a) Determine user's category based on ELO rating (see `useEffect` below).
+           - < 1200: 'beginner-plan'
+           - 1200-1800: 'middle-plan'
+           - > 1800: 'elite-plan'
+           - No rating / Guest: 'trial-class'
+        b) Fetch events filtering by this category slug.
+           - Example: `fetch('.../events?categories=middle-plan')`
+        c) Filter for future events only (`start_date > now`).
+        d) Sort by date ASC and display the nearest one (`events[0]`).
+      - **Booking:** The "Book Lesson" button should open the specific event URL 
+        (provided in the API response as `url`) or the general calendar page.
+
+   2. USER PROFILE & STATS
+      - **Source:** Your User Database / Auth Context.
+      - **Fields:** Avatar, Display Name, Membership Level (Pro/Free), ELO Rating, Total Games.
+      - **Visuals:** Status dot (green) indicates 'Online'.
+
+   3. GAMIFICATION (Awards)
+      - **Source:** Gamification Service API.
+      - **Display:** Show the 2 most recent or most significant unlocked achievements.
+
+   4. AI ASSISTANT (Chat Widget)
+      - **UI:** Expandable drawer (bottom-sheet style).
+      - **Integration:** Connect `handleSendMessage` to your AI Backend (e.g., OpenAI API).
+      - **Context:** Pass the user's last game PGN to the AI context so it can answer 
+        questions like "Why did I lose?" immediately.
+
+   5. STYLING
+      - Styles are scoped via CSS classes starting with `.wk-` to prevent conflicts 
+        with WordPress themes.
+      - The panel is fully responsive (fixed width on desktop, flexible on mobile if needed).
+   =================================================================================
 */
 
-// --- THEME CONSTANTS (Matching existing app) ---
-const THEME = {
-    bg: "bg-[#0B0E14]",         // Darkest background
-    panel: "bg-[#151922]",      // Panel background
-    panelBorder: "border-[#2A303C]", // Border color
-    accent: "text-[#D4AF37]",   // Gold text
-    accentBg: "bg-[#D4AF37]",   // Gold background
-    textMain: "text-[#E2E8F0]", // Main text
-    textMuted: "text-[#94A3B8]", // Muted text
-};
+// --- CSS STYLES ---
+const cssStyles = `
+  :root {
+    --wk-bg: #0B0E14;
+    --wk-panel: #151922;
+    --wk-border: #2A303C;
+    --wk-accent: #D4AF37;
+    --wk-accent-hover: #C5A028;
+    --wk-text-main: #F1F5F9; 
+    --wk-text-muted: #94A3B8; 
+    --wk-success: #4ADE80;
+    --wk-shadow-glow: 0 0 15px rgba(212, 175, 55, 0.1);
+  }
 
-export default function WhiteKnightProfilePanel({ isMobile }) {
-    if (isMobile) return null; // Hidden on mobile for now
+  .wk-wrapper, .wk-wrapper * { box-sizing: border-box; }
+  
+  .wk-wrapper {
+    height: 100%; /* ADAPTED: Was 100vh */
+    width: 100%;
+    background-color: var(--wk-bg);
+    display: flex;
+    flex-direction: column; /* ADAPTED: Column layout for sidebar */
+    /* justify-content: center; REMOVED for sidebar fit */
+    /* align-items: center; REMOVED for sidebar fit */
+    /* padding: 20px; REMOVED padding to fit container */
+    font-family: sans-serif;
+    overflow: hidden;
+  }
+
+  .wk-panel {
+    width: 100%; /* ADAPTED: Was 500px */
+    height: 100%; /* ADAPTED: Was 95vh */
+    background-color: var(--wk-panel);
+    /* border: 1px solid var(--wk-border); REMOVED border to blend */
+    /* border-radius: 16px; REMOVED radius to blend */
+    display: flex;
+    flex-direction: column;
+    /* box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); REMOVED shadow */
+    overflow: hidden;
+    position: relative;
+  }
+
+  .wk-scroll-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--wk-border) var(--wk-bg);
+  }
+
+  /* 1. Profile Card */
+  .wk-card-profile {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #1A1E26 0%, #111 100%);
+    border: 1px solid var(--wk-border);
+  }
+
+  .wk-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--wk-accent) 0%, #B39352 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    color: #000;
+    position: relative;
+    box-shadow: var(--wk-shadow-glow);
+  }
+
+  .wk-status-dot {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 14px; height: 14px;
+    background-color: var(--wk-success);
+    border: 2px solid #1A1E26;
+    border-radius: 50%;
+  }
+
+  /* 2. Stats Grid */
+  .wk-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .wk-stat-box {
+    background-color: var(--wk-bg);
+    border: 1px solid var(--wk-border);
+    padding: 12px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 90px;
+    transition: all 0.2s;
+  }
+  .wk-stat-box:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    background-color: #12141A;
+  }
+
+  .wk-label-mini {
+    color: var(--wk-text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .wk-value-large {
+    color: var(--wk-text-main);
+    font-family: monospace;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .wk-trend {
+    color: var(--wk-success);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 4px;
+    background-color: rgba(74, 222, 128, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* 3. Awards */
+  .wk-awards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .wk-award-item-compact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--wk-border);
+    background-color: var(--wk-bg);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .wk-award-item-compact:hover { border-color: rgba(212, 175, 55, 0.4); }
+  
+  .wk-award-icon-box {
+    padding: 10px;
+    border-radius: 8px;
+    background-color: rgba(212, 175, 55, 0.1);
+    color: var(--wk-accent);
+    margin-bottom: 8px;
+  }
+
+  /* 4. Schedule Card */
+  .wk-schedule-card {
+    background: linear-gradient(180deg, #1A1E26 0%, #0F1116 100%);
+    border: 1px solid var(--wk-border);
+    border-top: 3px solid var(--wk-accent);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3);
+  }
+  
+  .wk-schedule-bg {
+    position: absolute;
+    top: -10px; right: -20px;
+    opacity: 0.05;
+    transform: rotate(15deg);
+    pointer-events: none;
+    color: white;
+  }
+
+  .wk-schedule-header-group {
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .wk-schedule-title {
+    color: var(--wk-accent);
+    font-size: 15px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .wk-schedule-subtitle {
+    color: var(--wk-text-muted);
+    font-size: 13px; /* Increased font size */
+    margin-left: 26px; 
+    line-height: 1.4;
+  }
+
+  .wk-cat-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--wk-border);
+    padding-bottom: 12px;
+    position: relative; z-index: 10;
+    overflow-x: auto; /* Fix for overflow tabs */
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .wk-cat-tabs::-webkit-scrollbar { display: none; }
+
+  .wk-cat-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--wk-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .wk-cat-tab:hover { color: var(--wk-text-main); background: rgba(255,255,255,0.05); }
+  .wk-cat-tab.active { 
+    background-color: rgba(212, 175, 55, 0.15); 
+    color: var(--wk-accent); 
+    border-color: rgba(212, 175, 55, 0.3);
+  }
+
+  .wk-event-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+    position: relative; z-index: 10;
+  }
+  
+  .wk-date-box-sm {
+    text-align: center;
+    background-color: var(--wk-bg);
+    border: 1px solid var(--wk-border);
+    border-radius: 12px;
+    padding: 12px;
+    min-width: 64px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+  
+  .wk-event-info h4 {
+    color: var(--wk-text-main);
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    line-height: 1.3;
+  }
+  
+  .wk-event-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--wk-text-muted);
+    font-size: 12px;
+    flex-wrap: wrap; 
+  }
+
+  .wk-btn-book {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--wk-accent);
+    color: black;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    position: relative; z-index: 10;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+  }
+  .wk-btn-book:hover { 
+    background-color: var(--wk-accent-hover); 
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+  }
+
+  /* 5. AI Chat Widget */
+  .wk-chat-widget {
+    background-color: #0F1116;
+    border: 1px solid var(--wk-border);
+    border-radius: 12px;
+    padding: 18px; /* Increased padding */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.2s;
+  }
+  .wk-chat-widget:hover { border-color: var(--wk-accent); }
+
+  /* Drawer & Chat */
+  .wk-chat-drawer {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 85%;
+    background-color: #0F1116;
+    border-top: 1px solid var(--wk-accent);
+    border-radius: 20px 20px 0 0;
+    transform: translateY(110%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+    display: flex; flex-direction: column;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+  }
+  .wk-chat-drawer.open { transform: translateY(0); }
+  
+  .wk-chat-header {
+    padding: 18px;
+    border-bottom: 1px solid var(--wk-border);
+    display: flex; justify-content: space-between; align-items: center;
+    background-color: #151922;
+    border-radius: 20px 20px 0 0;
+  }
+  
+  .wk-chat-body {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+    background-color: #0B0E14;
+  }
+  
+  .wk-msg { 
+    max-width: 85%; padding: 12px 16px; font-size: 14px; /* Increased font */
+    line-height: 1.5;
+  }
+  .wk-msg-bot {
+    align-self: flex-start; background: #1A1E26; color: var(--wk-text-main);
+    border-radius: 12px 12px 12px 2px; border: 1px solid var(--wk-border);
+  }
+  .wk-msg-user {
+    align-self: flex-end; background: rgba(212,175,55,0.15); color: white;
+    border-radius: 12px 12px 2px 12px; border: 1px solid rgba(212,175,55,0.3);
+  }
+
+  .wk-chat-input-area {
+    padding: 18px; background-color: #151922; border-top: 1px solid var(--wk-border);
+    display: flex; gap: 10px;
+  }
+  
+  .wk-input {
+    flex: 1;
+    background-color: #080A0F;
+    border: 1px solid var(--wk-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 15px; /* Increased font */
+    color: white;
+    transition: all 0.2s;
+  }
+  .wk-input:focus {
+    outline: none;
+    border-color: var(--wk-accent);
+    background-color: #000;
+    box-shadow: 0 0 0 1px var(--wk-accent);
+  }
+
+  .wk-btn-icon {
+    width: 48px;
+    background-color: var(--wk-accent);
+    border-radius: 10px; border: none; color: black;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+`;
+
+// --- DATA LOGIC ---
+const CATEGORIES = [
+    { id: 'beginner', label: 'Beginner', slug: 'beginner' },
+    { id: 'middle', label: 'Middle', slug: 'middle' },
+    { id: 'elite', label: 'Elite', slug: 'elite' },
+    { id: 'trial', label: 'Trial', slug: 'trial' },
+];
+
+const MOCK_EVENTS = [
+    { id: 1, title: 'Chess Basics: The Fork', date: new Date(Date.now() + 86400000), coach: 'GM Alex', category: 'beginner' },
+    { id: 2, title: 'Advanced Endgames', date: new Date(Date.now() + 172800000), coach: 'IM Sarah', category: 'middle' },
+    { id: 3, title: 'Grandmaster Prep', date: new Date(Date.now() + 259200000), coach: 'GM Magnus', category: 'elite' },
+    { id: 4, title: 'Free Trial Class', date: new Date(Date.now() + 43200000), coach: 'Coach Mike', category: 'trial' },
+];
+
+export default function WhiteKnightProfilePanel() {
+    const [userRating, setUserRating] = useState(1450); // Mock user rating
+    const [activeCategory, setActiveCategory] = useState('middle');
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatInput, setChatInput] = useState("");
+    const [messages, setMessages] = useState([
+        { id: 1, sender: 'bot', text: "Hello! Ready for your game? Or do you need a quick warmup puzzle?" }
+    ]);
+    const msgsEndRef = useRef(null);
+
+    // 1. Determine Category based on Rating
+    useEffect(() => {
+        let cat = 'trial';
+        if (userRating > 0 && userRating < 1200) cat = 'beginner';
+        else if (userRating >= 1200 && userRating < 1800) cat = 'middle';
+        else if (userRating >= 1800) cat = 'elite';
+
+        setActiveCategory(cat);
+    }, [userRating]);
+
+    // 2. Fetch Events (Simulation)
+    useEffect(() => {
+        setLoading(true);
+        // [DEV NOTE] Use the real API here: https://whiteknight.academy/wp-json/tribe/events/v1/events
+        setTimeout(() => {
+            const filtered = MOCK_EVENTS.filter(e => e.category === activeCategory);
+            setEvents(filtered);
+            setLoading(false);
+        }, 600);
+    }, [activeCategory]);
+
+    const handleSendMessage = () => {
+        if (!chatInput.trim()) return;
+        setMessages([...messages, { id: Date.now(), sender: 'user', text: chatInput }]);
+        setChatInput("");
+        setTimeout(() => {
+            setMessages(prev => [...prev, { id: Date.now(), sender: 'bot', text: "I'm analyzing that..." }]);
+        }, 1000);
+    };
+
+    useEffect(() => {
+        if (isChatOpen) msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isChatOpen]);
+
+    const nextEvent = events[0];
 
     return (
-        // Panel Container
-        <div className={`w-[320px] ${THEME.panel} border-r border-[#2A303C] flex flex-col shadow-2xl z-20 h-full`}>
+        <>
+            <style>{cssStyles}</style>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+            <div className="wk-wrapper">
+                <div className="wk-panel">
 
-                {/* 1. PROFILE SUMMARY */}
-                <div className="flex items-center gap-4 p-4 rounded-xl border border-[#2A303C] bg-[#1A1E26]/50 shadow-inner">
-                    <div className="w-14 h-14 rounded-full bg-[#D4AF37] flex items-center justify-center text-black font-bold text-xl shadow-[0_0_20px_rgba(212,175,55,0.4)] relative">
-                        WK
-                        {/* Online Status */}
-                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#4ADE80] border-2 border-[#1A1E26] rounded-full"></div>
-                    </div>
-                    <div>
-                        <h3 className="text-white font-bold text-base">Hero User</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider">
-                                Pro Member
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                    <div className="wk-scroll-content">
 
-                {/* 2. STATS GRID */}
-                <div className="grid grid-cols-2 gap-3">
-                    {/* Rating Card */}
-                    <div className="bg-[#0B0E14] border border-[#2A303C] p-4 rounded-xl flex flex-col items-center hover:border-[#D4AF37]/30 transition-colors group cursor-pointer">
-                        <span className="text-[#64748B] text-[10px] uppercase font-bold mb-1 tracking-wider group-hover:text-[#D4AF37] transition-colors">Rating</span>
-                        <span className="text-white font-mono font-bold text-2xl">1450</span>
-                        <span className="text-[#4ADE80] text-[10px] flex items-center gap-1 mt-1 bg-[#4ADE80]/10 px-1.5 rounded">
-                            <TrendingUp size={12} /> +12
-                        </span>
-                    </div>
-                    {/* Games Card */}
-                    <div className="bg-[#0B0E14] border border-[#2A303C] p-4 rounded-xl flex flex-col items-center hover:border-[#D4AF37]/30 transition-colors group cursor-pointer">
-                        <span className="text-[#64748B] text-[10px] uppercase font-bold mb-1 tracking-wider group-hover:text-[#D4AF37] transition-colors">Games</span>
-                        <span className="text-white font-mono font-bold text-2xl">342</span>
-                        <span className="text-[#94A3B8] text-[10px] mt-1">Total Played</span>
-                    </div>
-                </div>
-
-                {/* 3. RECENT AWARDS */}
-                <div>
-                    <h4 className="text-[#64748B] text-xs uppercase tracking-widest font-bold mb-3 flex items-center gap-2 pl-1">
-                        <Trophy size={14} className="text-[#D4AF37]" /> Recent Awards
-                    </h4>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3 p-3 rounded-xl border border-[#2A303C] bg-[#0B0E14] hover:border-[#D4AF37]/50 transition-all cursor-pointer group">
-                            <div className="p-2 rounded-lg bg-[#D4AF37]/10 text-[#D4AF37] group-hover:bg-[#D4AF37] group-hover:text-black transition-colors"><Award size={18} /></div>
-                            <div className="flex-1">
-                                <p className="text-white text-xs font-bold group-hover:text-[#D4AF37] transition-colors">Tactical Master</p>
-                                <p className="text-[#64748B] text-[10px]">Solved 50 puzzles</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-xl border border-[#2A303C] bg-[#0B0E14] hover:border-[#4ADE80]/50 transition-all cursor-pointer group">
-                            <div className="p-2 rounded-lg bg-[#4ADE80]/10 text-[#4ADE80] group-hover:bg-[#4ADE80] group-hover:text-black transition-colors"><CheckCircle2 size={18} /></div>
-                            <div className="flex-1">
-                                <p className="text-white text-xs font-bold group-hover:text-[#4ADE80] transition-colors">Winning Streak</p>
-                                <p className="text-[#64748B] text-[10px]">Won 5 games in a row</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 4. SCHEDULE / NEXT LESSON */}
-                <div className="bg-gradient-to-br from-[#1A1E26] to-[#0F1116] border border-[#D4AF37]/30 rounded-xl p-5 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity"><Calendar size={80} /></div>
-
-                    <h4 className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
-                        <Calendar size={14} /> Next Lesson
-                    </h4>
-
-                    <div className="flex gap-4 mb-4 relative z-10">
-                        {/* Date Block */}
-                        <div className="text-center bg-[#0B0E14] border border-[#D4AF37]/20 rounded-lg p-2 min-w-[60px] shadow-lg">
-                            <span className="block text-[#64748B] text-[9px] uppercase font-bold tracking-wider">Oct</span>
-                            <span className="block text-white text-2xl font-bold font-serif">24</span>
-                        </div>
-
-                        {/* Lesson Details */}
-                        <div>
-                            <p className="text-white text-sm font-bold leading-tight mb-1">Endgame Strategy</p>
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <User size={10} className="text-[#D4AF37]" />
-                                <p className="text-[#94A3B8] text-xs">GM Alexander</p>
-                            </div>
-                            <div className="inline-block bg-[#D4AF37]/10 px-2 py-0.5 rounded text-[#D4AF37] text-[10px] font-mono border border-[#D4AF37]/20">
-                                18:00 - 19:00
-                            </div>
-                        </div>
-                    </div>
-
-                    <button className="w-full py-2.5 rounded-lg border border-[#2A303C] text-[#94A3B8] text-[10px] uppercase font-bold hover:bg-[#D4AF37] hover:text-black hover:border-[#D4AF37] transition-all relative z-10">
-                        Manage Schedule
-                    </button>
-                </div>
-
-                {/* 5. AI COACH CHAT (Placeholder) */}
-                <div className="bg-[#0B0E14] border border-[#2A303C] rounded-xl p-4 flex flex-col relative group hover:border-[#D4AF37]/50 transition-colors shadow-lg">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20">
-                                <Zap size={14} fill="currentColor" />
+                        {/* HEADER */}
+                        <div className="wk-card-profile">
+                            <div className="wk-avatar">
+                                WK
+                                <div className="wk-status-dot"></div>
                             </div>
                             <div>
-                                <span className="text-xs font-bold text-white block">AI Assistant</span>
-                                <span className="text-[9px] text-[#4ADE80] flex items-center gap-1">Online <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse"></span></span>
+                                <h3 style={{ color: 'white', fontWeight: 'bold', fontSize: '16px', margin: 0 }}>Hero User</h3>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                    <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)' }}>ELO {userRating}</span>
+                                    <span style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--wk-accent)', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>Pro</span>
+                                </div>
                             </div>
+                        </div>
+
+                        {/* STATS */}
+                        <div className="wk-grid-2">
+                            <div className="wk-stat-box">
+                                <span className="wk-label-mini">Rating</span>
+                                <span className="wk-value-large">{userRating}</span>
+                                <span className="wk-trend"><TrendingUp size={10} /> +12</span>
+                            </div>
+                            <div className="wk-stat-box">
+                                <span className="wk-label-mini">Games</span>
+                                <span className="wk-value-large">342</span>
+                                <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)', marginTop: '4px' }}>Total</span>
+                            </div>
+                        </div>
+
+                        {/* AWARDS */}
+                        <div>
+                            <h4 style={{ color: 'var(--wk-text-muted)', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Trophy size={14} color="var(--wk-accent)" /> Recent Awards
+                            </h4>
+                            <div className="wk-awards-row">
+                                <div className="wk-award-item-compact">
+                                    <div className="wk-award-icon-box"><Award size={20} /></div>
+                                    <p style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>Tactical Master</p>
+                                </div>
+                                <div className="wk-award-item-compact">
+                                    <div className="wk-award-icon-box" style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--wk-success)' }}><CheckCircle2 size={20} /></div>
+                                    <p style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>Streak x5</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* NEXT LESSON */}
+                        <div className="wk-schedule-card">
+                            <div className="wk-schedule-bg"><Video size={100} /></div>
+
+                            <div className="wk-schedule-header-group">
+                                <div className="wk-schedule-title">
+                                    <Calendar size={18} /> Upcoming Live Lessons
+                                </div>
+                                <div className="wk-schedule-subtitle">
+                                    Online training with a <span style={{ color: 'var(--wk-accent)', fontWeight: 'bold' }}>Real Human Coach</span>
+                                </div>
+                            </div>
+
+                            <div className="wk-cat-tabs">
+                                {CATEGORIES.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        className={`wk-cat-tab ${activeCategory === cat.slug ? 'active' : ''}`}
+                                        onClick={() => setActiveCategory(cat.slug)}
+                                    >
+                                        {cat.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {loading ? (
+                                <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wk-text-muted)' }}>
+                                    <Loader2 className="animate-spin" size={24} />
+                                </div>
+                            ) : nextEvent ? (
+                                <div className="wk-event-row">
+                                    <div className="wk-date-box-sm">
+                                        <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>
+                                            {nextEvent.date.toLocaleString('en-US', { month: 'short' })}
+                                        </span>
+                                        <span style={{ fontSize: '24px', color: 'white', fontWeight: 'bold', display: 'block', marginTop: '2px' }}>
+                                            {nextEvent.date.getDate()}
+                                        </span>
+                                    </div>
+                                    <div className="wk-event-info">
+                                        <h4>{nextEvent.title}</h4>
+                                        <div className="wk-event-meta">
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={12} color="var(--wk-accent)" /> {nextEvent.coach}</span>
+                                            <span style={{ opacity: 0.3 }}>|</span>
+                                            <span>{nextEvent.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '20px 10px', color: 'var(--wk-text-muted)', fontSize: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginBottom: '16px' }}>
+                                    No upcoming lessons found for this level.
+                                </div>
+                            )}
+
+                            <button className="wk-btn-book" onClick={() => window.open('https://whiteknight.academy/online-chess-lessons-calendar/', '_blank')}>
+                                Book Lesson <ChevronRight size={16} />
+                            </button>
+                        </div>
+
+                        {/* AI CHAT WIDGET */}
+                        <div className="wk-chat-widget" onClick={() => setIsChatOpen(true)}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', color: 'var(--wk-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Zap size={18} fill="currentColor" />
+                                </div>
+                                <div>
+                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px', display: 'block' }}>AI Assistant</span>
+                                    <span style={{ color: 'var(--wk-text-muted)', fontSize: '12px' }}>Need help? Ask me!</span>
+                                </div>
+                            </div>
+                            <ChevronRight size={18} color="var(--wk-text-muted)" />
+                        </div>
+
+                        <div style={{ minHeight: '10px' }}></div>
+
+                    </div>
+
+                    {/* --- DRAWER --- */}
+                    <div className={`wk-chat-drawer ${isChatOpen ? 'open' : ''}`}>
+                        <div className="wk-chat-header">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--wk-accent)', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Zap size={18} fill="currentColor" />
+                                </div>
+                                <div>
+                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '15px', display: 'block' }}>White Knight AI</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--wk-success)' }}>● Online</span>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsChatOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--wk-text-muted)', cursor: 'pointer' }}>
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        <div className="wk-chat-messages">
+                            {messages.map(msg => (
+                                <div key={msg.id} className={msg.sender === 'bot' ? 'wk-msg wk-msg-bot' : 'wk-msg wk-msg-user'}>
+                                    {msg.text}
+                                </div>
+                            ))}
+                            <div ref={msgsEndRef} />
+                        </div>
+
+                        <div className="wk-chat-input-area">
+                            <input
+                                type="text"
+                                className="wk-input"
+                                placeholder="Type your question..."
+                                value={chatInput}
+                                onChange={(e) => setChatInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                            />
+                            <button className="wk-btn-icon" onClick={handleSendMessage}>
+                                <Send size={20} />
+                            </button>
                         </div>
                     </div>
 
-                    <div className="bg-[#1A1E26] p-3 rounded-lg mb-3 border border-[#2A303C]/50">
-                        <p className="text-[#94A3B8] text-xs italic leading-relaxed">
-                            "Ready to warm up? I prepared a puzzle based on your last game!"
-                        </p>
-                    </div>
-
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            placeholder="Ask a question..."
-                            className="w-full bg-[#1A1E26] border border-[#2A303C] rounded-lg px-3 py-2 text-xs text-white placeholder-[#64748B] focus:outline-none focus:border-[#D4AF37] transition-colors"
-                            disabled
-                        />
-                        <button className="p-2 bg-[#D4AF37] rounded-lg text-black hover:bg-[#C5A028] transition-colors shadow-lg shadow-[#D4AF37]/20">
-                            <MessageSquare size={16} />
-                        </button>
-                    </div>
                 </div>
-
             </div>
-        </div>
+        </>
     );
 }
