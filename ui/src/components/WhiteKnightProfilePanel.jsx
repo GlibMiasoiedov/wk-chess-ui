@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-    Trophy, Calendar, MessageSquare, TrendingUp,
-    Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
-    Loader2, Video
+  Trophy, Calendar, MessageSquare, TrendingUp,
+  Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
+  Loader2, Video
 } from 'lucide-react';
 
 /* [INTEGRATION GUIDE FOR DEVELOPERS]
@@ -61,6 +61,11 @@ const cssStyles = `
     --wk-text-muted: #94A3B8; 
     --wk-success: #4ADE80;
     --wk-shadow-glow: 0 0 15px rgba(212, 175, 55, 0.1);
+  }
+
+  @keyframes wk-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   .wk-wrapper, .wk-wrapper * { box-sizing: border-box; }
@@ -442,243 +447,250 @@ const cssStyles = `
 
 // --- DATA LOGIC ---
 const CATEGORIES = [
-    { id: 'beginner', label: 'Beginner', slug: 'beginner' },
-    { id: 'middle', label: 'Middle', slug: 'middle' },
-    { id: 'elite', label: 'Elite', slug: 'elite' },
-    { id: 'trial', label: 'Trial', slug: 'trial' },
+  { id: 'beginner', label: 'Beginner', slug: 'beginner' },
+  { id: 'middle', label: 'Middle', slug: 'middle' },
+  { id: 'elite', label: 'Elite', slug: 'elite' },
+  { id: 'trial', label: 'Trial', slug: 'trial' },
 ];
 
 const MOCK_EVENTS = [
-    { id: 1, title: 'Chess Basics: The Fork', date: new Date(Date.now() + 86400000), coach: 'GM Alex', category: 'beginner' },
-    { id: 2, title: 'Advanced Endgames', date: new Date(Date.now() + 172800000), coach: 'IM Sarah', category: 'middle' },
-    { id: 3, title: 'Grandmaster Prep', date: new Date(Date.now() + 259200000), coach: 'GM Magnus', category: 'elite' },
-    { id: 4, title: 'Free Trial Class', date: new Date(Date.now() + 43200000), coach: 'Coach Mike', category: 'trial' },
+  { id: 1, title: 'Chess Basics: The Fork', date: new Date(Date.now() + 86400000), coach: 'GM Alex', category: 'beginner' },
+  { id: 2, title: 'Advanced Endgames', date: new Date(Date.now() + 172800000), coach: 'IM Sarah', category: 'middle' },
+  { id: 3, title: 'Grandmaster Prep', date: new Date(Date.now() + 259200000), coach: 'GM Magnus', category: 'elite' },
+  { id: 4, title: 'Free Trial Class', date: new Date(Date.now() + 43200000), coach: 'Coach Mike', category: 'trial' },
 ];
 
 export default function WhiteKnightProfilePanel() {
-    const [userRating, setUserRating] = useState(1450); // Mock user rating
-    const [activeCategory, setActiveCategory] = useState('middle');
-    const [events, setEvents] = useState([]);
-    const [loading, setLoading] = useState(false);
+  const [userRating, setUserRating] = useState(1450); // Mock user rating
+  const [activeCategory, setActiveCategory] = useState('middle');
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [chatInput, setChatInput] = useState("");
-    const [messages, setMessages] = useState([
-        { id: 1, sender: 'bot', text: "Hello! Ready for your game? Or do you need a quick warmup puzzle?" }
-    ]);
-    const msgsEndRef = useRef(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [messages, setMessages] = useState([
+    { id: 1, sender: 'bot', text: "Hello! Ready for your game? Or do you need a quick warmup puzzle?" }
+  ]);
+  const msgsEndRef = useRef(null);
 
-    // 1. Determine Category based on Rating
-    useEffect(() => {
-        let cat = 'trial';
-        if (userRating > 0 && userRating < 1200) cat = 'beginner';
-        else if (userRating >= 1200 && userRating < 1800) cat = 'middle';
-        else if (userRating >= 1800) cat = 'elite';
+  // 1. Determine Category based on Rating
+  useEffect(() => {
+    let cat = 'trial';
+    if (userRating > 0 && userRating < 1200) cat = 'beginner';
+    else if (userRating >= 1200 && userRating < 1800) cat = 'middle';
+    else if (userRating >= 1800) cat = 'elite';
 
-        setActiveCategory(cat);
-    }, [userRating]);
+    setActiveCategory(cat);
+  }, [userRating]);
 
-    // 2. Fetch Events (Simulation)
-    useEffect(() => {
-        setLoading(true);
-        // [DEV NOTE] Use the real API here: https://whiteknight.academy/wp-json/tribe/events/v1/events
-        setTimeout(() => {
-            const filtered = MOCK_EVENTS.filter(e => e.category === activeCategory);
-            setEvents(filtered);
-            setLoading(false);
-        }, 600);
-    }, [activeCategory]);
+  // 2. Fetch Events (Simulation)
+  useEffect(() => {
+    setLoading(true);
+    // [DEV NOTE] Use the real API here: https://whiteknight.academy/wp-json/tribe/events/v1/events
+    setTimeout(() => {
+      const filtered = MOCK_EVENTS.filter(e => e.category === activeCategory);
+      setEvents(filtered);
+      setLoading(false);
+    }, 600);
+  }, [activeCategory]);
 
-    const handleSendMessage = () => {
-        if (!chatInput.trim()) return;
-        setMessages([...messages, { id: Date.now(), sender: 'user', text: chatInput }]);
-        setChatInput("");
-        setTimeout(() => {
-            setMessages(prev => [...prev, { id: Date.now(), sender: 'bot', text: "I'm analyzing that..." }]);
-        }, 1000);
-    };
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return;
+    setMessages([...messages, { id: Date.now(), sender: 'user', text: chatInput }]);
+    setChatInput("");
+    setTimeout(() => {
+      setMessages(prev => [...prev, { id: Date.now(), sender: 'bot', text: "I'm analyzing that..." }]);
+    }, 1000);
+  };
 
-    useEffect(() => {
-        if (isChatOpen) msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, isChatOpen]);
+  useEffect(() => {
+    if (isChatOpen) msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isChatOpen]);
 
-    const nextEvent = events[0];
+  const nextEvent = events[0];
 
-    return (
-        <>
-            <style>{cssStyles}</style>
+  // --- DIAGNOSTICS ---
+  useEffect(() => {
+    console.log('[WK-Profile] Icons Check:', {
+      Trophy, Calendar, MessageSquare, TrendingUp, Award,
+      CheckCircle2, Zap, User, Star, X, Send, ChevronRight, Loader2, Video
+    });
+  }, []);
 
-            <div className="wk-wrapper">
-                <div className="wk-panel">
+  return (
+    <>
+      <style>{cssStyles}</style>
 
-                    <div className="wk-scroll-content">
+      <div className="wk-wrapper">
+        <div className="wk-panel">
 
-                        {/* HEADER */}
-                        <div className="wk-card-profile">
-                            <div className="wk-avatar">
-                                WK
-                                <div className="wk-status-dot"></div>
-                            </div>
-                            <div>
-                                <h3 style={{ color: 'white', fontWeight: 'bold', fontSize: '16px', margin: 0 }}>Hero User</h3>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                                    <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)' }}>ELO {userRating}</span>
-                                    <span style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--wk-accent)', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>Pro</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* STATS */}
-                        <div className="wk-grid-2">
-                            <div className="wk-stat-box">
-                                <span className="wk-label-mini">Rating</span>
-                                <span className="wk-value-large">{userRating}</span>
-                                <span className="wk-trend"><TrendingUp size={10} /> +12</span>
-                            </div>
-                            <div className="wk-stat-box">
-                                <span className="wk-label-mini">Games</span>
-                                <span className="wk-value-large">342</span>
-                                <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)', marginTop: '4px' }}>Total</span>
-                            </div>
-                        </div>
-
-                        {/* AWARDS */}
-                        <div>
-                            <h4 style={{ color: 'var(--wk-text-muted)', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Trophy size={14} color="var(--wk-accent)" /> Recent Awards
-                            </h4>
-                            <div className="wk-awards-row">
-                                <div className="wk-award-item-compact">
-                                    <div className="wk-award-icon-box"><Award size={20} /></div>
-                                    <p style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>Tactical Master</p>
-                                </div>
-                                <div className="wk-award-item-compact">
-                                    <div className="wk-award-icon-box" style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--wk-success)' }}><CheckCircle2 size={20} /></div>
-                                    <p style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>Streak x5</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* NEXT LESSON */}
-                        <div className="wk-schedule-card">
-                            <div className="wk-schedule-bg"><Video size={100} /></div>
-
-                            <div className="wk-schedule-header-group">
-                                <div className="wk-schedule-title">
-                                    <Calendar size={18} /> Upcoming Live Lessons
-                                </div>
-                                <div className="wk-schedule-subtitle">
-                                    Online training with a <span style={{ color: 'var(--wk-accent)', fontWeight: 'bold' }}>Real Human Coach</span>
-                                </div>
-                            </div>
-
-                            <div className="wk-cat-tabs">
-                                {CATEGORIES.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        className={`wk-cat-tab ${activeCategory === cat.slug ? 'active' : ''}`}
-                                        onClick={() => setActiveCategory(cat.slug)}
-                                    >
-                                        {cat.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {loading ? (
-                                <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wk-text-muted)' }}>
-                                    <Loader2 className="animate-spin" size={24} />
-                                </div>
-                            ) : nextEvent ? (
-                                <div className="wk-event-row">
-                                    <div className="wk-date-box-sm">
-                                        <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>
-                                            {nextEvent.date.toLocaleString('en-US', { month: 'short' })}
-                                        </span>
-                                        <span style={{ fontSize: '24px', color: 'white', fontWeight: 'bold', display: 'block', marginTop: '2px' }}>
-                                            {nextEvent.date.getDate()}
-                                        </span>
-                                    </div>
-                                    <div className="wk-event-info">
-                                        <h4>{nextEvent.title}</h4>
-                                        <div className="wk-event-meta">
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={12} color="var(--wk-accent)" /> {nextEvent.coach}</span>
-                                            <span style={{ opacity: 0.3 }}>|</span>
-                                            <span>{nextEvent.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div style={{ textAlign: 'center', padding: '20px 10px', color: 'var(--wk-text-muted)', fontSize: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginBottom: '16px' }}>
-                                    No upcoming lessons found for this level.
-                                </div>
-                            )}
-
-                            <button className="wk-btn-book" onClick={() => window.open('https://whiteknight.academy/online-chess-lessons-calendar/', '_blank')}>
-                                Book Lesson <ChevronRight size={16} />
-                            </button>
-                        </div>
-
-                        {/* AI CHAT WIDGET */}
-                        <div className="wk-chat-widget" onClick={() => setIsChatOpen(true)}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', color: 'var(--wk-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Zap size={18} fill="currentColor" />
-                                </div>
-                                <div>
-                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px', display: 'block' }}>AI Assistant</span>
-                                    <span style={{ color: 'var(--wk-text-muted)', fontSize: '12px' }}>Need help? Ask me!</span>
-                                </div>
-                            </div>
-                            <ChevronRight size={18} color="var(--wk-text-muted)" />
-                        </div>
-
-                        <div style={{ minHeight: '10px' }}></div>
-
-                    </div>
-
-                    {/* --- DRAWER --- */}
-                    <div className={`wk-chat-drawer ${isChatOpen ? 'open' : ''}`}>
-                        <div className="wk-chat-header">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--wk-accent)', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Zap size={18} fill="currentColor" />
-                                </div>
-                                <div>
-                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '15px', display: 'block' }}>White Knight AI</span>
-                                    <span style={{ fontSize: '11px', color: 'var(--wk-success)' }}>● Online</span>
-                                </div>
-                            </div>
-                            <button onClick={() => setIsChatOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--wk-text-muted)', cursor: 'pointer' }}>
-                                <X size={22} />
-                            </button>
-                        </div>
-
-                        <div className="wk-chat-messages">
-                            {messages.map(msg => (
-                                <div key={msg.id} className={msg.sender === 'bot' ? 'wk-msg wk-msg-bot' : 'wk-msg wk-msg-user'}>
-                                    {msg.text}
-                                </div>
-                            ))}
-                            <div ref={msgsEndRef} />
-                        </div>
-
-                        <div className="wk-chat-input-area">
-                            <input
-                                type="text"
-                                className="wk-input"
-                                placeholder="Type your question..."
-                                value={chatInput}
-                                onChange={(e) => setChatInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                            />
-                            <button className="wk-btn-icon" onClick={handleSendMessage}>
-                                <Send size={20} />
-                            </button>
-                        </div>
-                    </div>
-
+          <div className="wk-scroll-content">
+            {/* HEADER */}
+            <div className="wk-card-profile">
+              <div className="wk-avatar">
+                WK
+                <div className="wk-status-dot"></div>
+              </div>
+              <div>
+                <h3 style={{ color: 'white', fontWeight: 'bold', fontSize: '16px', margin: 0 }}>Hero User</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)' }}>ELO {userRating}</span>
+                  <span style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--wk-accent)', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>Pro</span>
                 </div>
+              </div>
             </div>
-        </>
-    );
+
+            {/* STATS */}
+            <div className="wk-grid-2">
+              <div className="wk-stat-box">
+                <span className="wk-label-mini">Rating</span>
+                <span className="wk-value-large">{userRating}</span>
+                <span className="wk-trend"><TrendingUp size={10} /> +12</span>
+              </div>
+              <div className="wk-stat-box">
+                <span className="wk-label-mini">Games</span>
+                <span className="wk-value-large">342</span>
+                <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)', marginTop: '4px' }}>Total</span>
+              </div>
+            </div>
+
+            {/* AWARDS */}
+            <div>
+              <h4 style={{ color: 'var(--wk-text-muted)', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Trophy size={14} color="var(--wk-accent)" /> Recent Awards
+              </h4>
+              <div className="wk-awards-row">
+                <div className="wk-award-item-compact">
+                  <div className="wk-award-icon-box"><Award size={20} /></div>
+                  <p style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>Tactical Master</p>
+                </div>
+                <div className="wk-award-item-compact">
+                  <div className="wk-award-icon-box" style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--wk-success)' }}><CheckCircle2 size={20} /></div>
+                  <p style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>Streak x5</p>
+                </div>
+              </div>
+            </div>
+
+            {/* NEXT LESSON */}
+            <div className="wk-schedule-card">
+              <div className="wk-schedule-bg"><Video size={100} /></div>
+
+              <div className="wk-schedule-header-group">
+                <div className="wk-schedule-title">
+                  <Calendar size={18} /> Upcoming Live Lessons
+                </div>
+                <div className="wk-schedule-subtitle">
+                  Online training with a <span style={{ color: 'var(--wk-accent)', fontWeight: 'bold' }}>Real Human Coach</span>
+                </div>
+              </div>
+
+              <div className="wk-cat-tabs">
+                {CATEGORIES.map(cat => (
+                  <button
+                    key={cat.id}
+                    className={`wk-cat-tab ${activeCategory === cat.slug ? 'active' : ''}`}
+                    onClick={() => setActiveCategory(cat.slug)}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              {loading ? (
+                <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wk-text-muted)' }}>
+                  <Loader2 size={24} style={{ animation: 'wk-spin 1s linear infinite' }} />
+                </div>
+              ) : nextEvent ? (
+                <div className="wk-event-row">
+                  <div className="wk-date-box-sm">
+                    <span style={{ fontSize: '10px', color: 'var(--wk-text-muted)', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>
+                      {nextEvent.date.toLocaleString('en-US', { month: 'short' })}
+                    </span>
+                    <span style={{ fontSize: '24px', color: 'white', fontWeight: 'bold', display: 'block', marginTop: '2px' }}>
+                      {nextEvent.date.getDate()}
+                    </span>
+                  </div>
+                  <div className="wk-event-info">
+                    <h4>{nextEvent.title}</h4>
+                    <div className="wk-event-meta">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={12} color="var(--wk-accent)" /> {nextEvent.coach}</span>
+                      <span style={{ opacity: 0.3 }}>|</span>
+                      <span>{nextEvent.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '20px 10px', color: 'var(--wk-text-muted)', fontSize: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginBottom: '16px' }}>
+                  No upcoming lessons found for this level.
+                </div>
+              )}
+
+              <button className="wk-btn-book" onClick={() => window.open('https://whiteknight.academy/online-chess-lessons-calendar/', '_blank')}>
+                Book Lesson <ChevronRight size={16} />
+              </button>
+            </div>
+
+            {/* AI CHAT WIDGET */}
+            <div className="wk-chat-widget" onClick={() => setIsChatOpen(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', color: 'var(--wk-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Zap size={18} fill="currentColor" />
+                </div>
+                <div>
+                  <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px', display: 'block' }}>AI Assistant</span>
+                  <span style={{ color: 'var(--wk-text-muted)', fontSize: '12px' }}>Need help? Ask me!</span>
+                </div>
+              </div>
+              <ChevronRight size={18} color="var(--wk-text-muted)" />
+            </div>
+
+            <div style={{ minHeight: '10px' }}></div>
+
+          </div>
+
+          {/* --- DRAWER --- */}
+          <div className={`wk-chat-drawer ${isChatOpen ? 'open' : ''}`}>
+            <div className="wk-chat-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--wk-accent)', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Zap size={18} fill="currentColor" />
+                </div>
+                <div>
+                  <span style={{ color: 'white', fontWeight: 'bold', fontSize: '15px', display: 'block' }}>White Knight AI</span>
+                  <span style={{ fontSize: '11px', color: 'var(--wk-success)' }}>● Online</span>
+                </div>
+              </div>
+              <button onClick={() => setIsChatOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--wk-text-muted)', cursor: 'pointer' }}>
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="wk-chat-messages">
+              {messages.map(msg => (
+                <div key={msg.id} className={msg.sender === 'bot' ? 'wk-msg wk-msg-bot' : 'wk-msg wk-msg-user'}>
+                  {msg.text}
+                </div>
+              ))}
+              <div ref={msgsEndRef} />
+            </div>
+
+            <div className="wk-chat-input-area">
+              <input
+                type="text"
+                className="wk-input"
+                placeholder="Type your question..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+              />
+              <button className="wk-btn-icon" onClick={handleSendMessage}>
+                <Send size={20} />
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </>
+  );
 }
