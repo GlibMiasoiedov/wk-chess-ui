@@ -377,7 +377,7 @@ const cssStyles = `
 
   .wkp-schedule-title {
     color: var(--wkp-accent) !important;
-    font-size: 11px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.04em !important;
@@ -389,7 +389,7 @@ const cssStyles = `
 
   .wkp-schedule-subtitle {
     color: var(--wkp-text-muted) !important;
-    font-size: 10px !important;
+    font-size: 11px !important;
     margin-left: 22px !important;
     line-height: 1.3 !important;
   }
