@@ -57,6 +57,7 @@ function ChessBoardInternal({
     const [containerWidth, setContainerWidth] = useState(400);
     const [moveHintSquares, setMoveHintSquares] = useState([]);
     const [currentPosition, setCurrentPosition] = useState(position);
+    const [moveFrom, setMoveFrom] = useState(null);
 
     // Sync local state when prop changes
     useEffect(() => {
@@ -104,18 +105,82 @@ function ChessBoardInternal({
                 }
             });
         }
+        // Highlight selected piece (moveFrom)
+        if (moveFrom) {
+            styles[moveFrom] = {
+                ...(styles[moveFrom] || {}),
+                backgroundColor: 'rgba(255, 255, 0, 0.4)'
+            };
+        }
+
         return styles;
-    }, [highlightSquares, moveHintSquares]);
+    }, [highlightSquares, moveHintSquares, moveFrom]);
+
+    // Click handler for "Click to Move"
+    const onSquareClick = useCallback((square) => {
+        if (disabled) return;
+
+        // Visual feedback helper
+        const highlightMoves = (sq) => {
+            if (getValidMoves) {
+                const moves = getValidMoves(sq);
+                if (moves && moves.length > 0) {
+                    setMoveHintSquares(moves);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // Case 1: No piece selected yet
+        if (!moveFrom) {
+            const moves = getValidMoves ? getValidMoves(square) : [];
+            if (moves && moves.length > 0) {
+                setMoveFrom(square);
+                setMoveHintSquares(moves);
+            }
+            return;
+        }
+
+        // Case 2: Piece already selected (moveFrom)
+
+        // Attempt move
+        if (onMove) {
+            const result = onMove(moveFrom, square);
+            if (result === true || result?.valid === true) {
+                // Move successful
+                setMoveFrom(null);
+                setMoveHintSquares([]);
+                return;
+            }
+        }
+
+        // Move invalid.
+        // Check if user clicked on another friendly piece (change selection)
+        const moves = getValidMoves ? getValidMoves(square) : [];
+        if (moves && moves.length > 0) {
+            setMoveFrom(square);
+            setMoveHintSquares(moves);
+        } else {
+            // Deselect
+            setMoveFrom(null);
+            setMoveHintSquares([]);
+        }
+    }, [disabled, moveFrom, getValidMoves, onMove]);
 
     // Handlers
     const onPieceDragBegin = useCallback((piece, sourceSquare) => {
+        setMoveFrom(sourceSquare); // Sync drag with click selection
         if (showMoveHints && getValidMoves) {
             const valid = getValidMoves(sourceSquare);
             if (valid?.length) setMoveHintSquares(valid);
         }
     }, [showMoveHints, getValidMoves]);
 
-    const onPieceDragEnd = useCallback(() => setMoveHintSquares([]), []);
+    const onPieceDragEnd = useCallback(() => {
+        setMoveFrom(null);
+        setMoveHintSquares([]);
+    }, []);
 
     // FIX v1.28: react-chessboard v5.x passes single object
     const onDrop = useCallback((dropData) => {
@@ -126,6 +191,7 @@ function ChessBoardInternal({
 
         console.log('[ChessBoard] onDrop:', { sourceSquare, targetSquare, piece });
 
+        setMoveFrom(null); // Clear selection on drop
         setMoveHintSquares([]);
 
         if (disabled) return false;
@@ -163,13 +229,13 @@ function ChessBoardInternal({
 
     return (
         <div ref={containerRef} className="wk-chessboard-container" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
-            <div style={{ position: 'absolute', top: 5, right: 5, color: 'lime', fontSize: '10px', pointerEvents: 'none' }}>v1.17</div>
             {/* FIX: Props passed directly, NOT via options={{}} */}
             <Chessboard
                 id={boardId}
                 position={currentPosition}
                 boardOrientation={orientation}
                 onPieceDrop={onDrop}
+                onSquareClick={onSquareClick}
                 onPieceDragBegin={onPieceDragBegin}
                 onPieceDragEnd={onPieceDragEnd}
                 isDraggablePiece={isDraggablePiece}
