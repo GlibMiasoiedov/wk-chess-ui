@@ -367,7 +367,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
 
                 {/* NEW LEFT: PROFILE & STATS PANEL (Desktop Only) */}
                 {!isMobile && (
-                    <div style={{ width: '350px', flexShrink: 0, height: '100%', borderRight: `1px solid ${THEME.panelBorder}` }}>
+                    <div style={{ width: '480px', flexShrink: 0, height: '100%', borderRight: `1px solid ${THEME.panelBorder}` }}>
                         <WhiteKnightProfilePanel isMobile={isMobile} />
                     </div>
                 )}
