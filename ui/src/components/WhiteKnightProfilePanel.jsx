@@ -6,7 +6,7 @@ console.log("WK Profile Panel v2.3 Loaded - Integrated Buttons");
 import {
   Trophy, Calendar, MessageSquare, TrendingUp,
   Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
-  Loader2, Video, Link2, Unlink
+  Loader2, Video, Link2, Unlink, AlertTriangle
 } from 'lucide-react';
 
 /* [INTEGRATION GUIDE FOR DEVELOPERS]
@@ -905,6 +905,9 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
   const [chesscomProfile, setChesscomProfile] = useState(null);
   const [chesscomStats, setChesscomStats] = useState(null);
 
+  // Exit Warning State
+  const [showExitWarning, setShowExitWarning] = useState(false);
+
   // Derived display values
   const displayName = chesscomProfile?.name || chesscomProfile?.username || 'Hero User';
   const displayAvatar = chesscomProfile?.avatar || null;
@@ -1327,6 +1330,44 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
             </button>
           </div>
         </div>
+
+        {/* EXIT WARNING POPUP (Non-Logged Users) */}
+        {showExitWarning && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ backgroundColor: '#151922', border: '1px solid #2A303C', borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '3px', backgroundColor: '#EF4444' }}></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', color: '#EF4444' }}>
+                <AlertTriangle size={24} />
+                <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', margin: 0 }}>Unsaved Data</h3>
+              </div>
+              <p style={{ color: '#94A3B8', fontSize: '13px', marginBottom: '20px', lineHeight: 1.5 }}>
+                Your game data will be lost if you leave without signing up. Create an account to save your progress.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => setShowExitWarning(false)}
+                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #2A303C', backgroundColor: 'transparent', color: '#94A3B8', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer', letterSpacing: '0.08em' }}
+                  >
+                    Stay
+                  </button>
+                  <button
+                    onClick={() => { setShowExitWarning(false); /* TODO: Trigger actual close */ }}
+                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#EF4444', color: 'white', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer', letterSpacing: '0.08em', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}
+                  >
+                    Exit
+                  </button>
+                </div>
+                <button
+                  onClick={() => { setShowExitWarning(false); /* TODO: Open auth modal in parent */ }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D4AF37', backgroundColor: 'rgba(212,175,55,0.1)', color: '#D4AF37', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer', letterSpacing: '0.08em' }}
+                >
+                  Sign Up to Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </>
