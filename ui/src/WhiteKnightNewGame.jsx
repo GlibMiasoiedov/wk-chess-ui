@@ -454,29 +454,20 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         {/* Bot Avatar Large */}
                         <div
                             style={styles.botAvatarLarge}
-                            onClick={isTablet ? handleStartGame : cycleDifficulty}
+                            onClick={cycleDifficulty}
                             onMouseEnter={() => setHoveredBot(true)}
                             onMouseLeave={() => setHoveredBot(false)}
                         >
                             <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${THEME.accent}`, opacity: hoveredBot ? 0.4 : 0.2, filter: 'blur(1px)', transition: 'opacity 0.5s' }}></div>
 
-                            <div style={{ color: THEME.accent, transform: hoveredBot ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.5s', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                {isTablet ? (
-                                    <>
-                                        <Play size={40} fill="currentColor" />
-                                        <span style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '8px' }}>PLAY</span>
-                                    </>
-                                ) : (
-                                    activeBot.icon
-                                )}
+                            <div style={{ color: THEME.accent, transform: hoveredBot ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.5s' }}>
+                                {activeBot.icon}
                             </div>
 
                             {/* Level Badge */}
-                            {!isTablet && (
-                                <div style={{ position: 'absolute', bottom: '-12px', backgroundColor: THEME.accent, color: 'black', fontSize: '12px', fontWeight: 'bold', padding: '4px 12px', borderRadius: '999px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                    Rating: {activeBot.rating}
-                                </div>
-                            )}
+                            <div style={{ position: 'absolute', bottom: '-12px', backgroundColor: THEME.accent, color: 'black', fontSize: '12px', fontWeight: 'bold', padding: '4px 12px', borderRadius: '999px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                                Rating: {activeBot.rating}
+                            </div>
                         </div>
 
                         {/* INTERACTIVE SUMMARY GRID */}
