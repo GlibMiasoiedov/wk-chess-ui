@@ -86,7 +86,20 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
     const [isTimeExpanded, setIsTimeExpanded] = useState(false);
     const [selectedColor, setSelectedColor] = useState('random');
     const [gameMode, setGameMode] = useState('standard'); // 'standard' | '960'
+
     const [showAuthModal, setShowAuthModal] = useState(false);
+
+    // --- RESPONSIVE STATE ---
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+    const [showRightPanel, setShowRightPanel] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const isTablet = windowWidth >= 768 && windowWidth < 1200;
 
     // Hover states for JS-based hover effects
     const [hoveredStart, setHoveredStart] = useState(false);
@@ -230,6 +243,25 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
             cursor: 'pointer',
             transition: 'all 0.2s'
         },
+        // OPTIONS TOGGLE (Tablet Only)
+        optionsToggle: {
+            position: 'absolute',
+            right: '0',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            backgroundColor: THEME.panel,
+            border: `1px solid ${THEME.panelBorder}`,
+            borderRight: 'none',
+            borderRadius: '12px 0 0 12px',
+            padding: '16px 8px',
+            cursor: 'pointer',
+            zIndex: 40,
+            display: isTablet && !showRightPanel ? 'flex' : 'none',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '-4px 0 12px rgba(0,0,0,0.2)'
+        },
         leftPanel: {
             flex: 1,
             backgroundColor: '#080A0F',
@@ -243,14 +275,19 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
             overflowY: isMobile ? 'auto' : 'hidden'
         },
         rightPanel: {
-            width: '500px',
+            width: isTablet ? '50%' : isMobile ? '100%' : '500px',
             backgroundColor: THEME.panel,
             borderLeft: `1px solid ${THEME.panelBorder}`,
             display: isMobile ? 'none' : 'flex',
             flexDirection: 'column',
             boxShadow: '-10px 0 40px rgba(0,0,0,0.3)',
-            zIndex: 20,
-            height: '100%'
+            zIndex: 60,
+            height: '100%',
+            position: isTablet ? 'absolute' : 'relative',
+            right: 0,
+            top: 0,
+            transform: isTablet && !showRightPanel ? 'translateX(100%)' : 'translateX(0)',
+            transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         },
         botAvatarLarge: {
             width: isMobile ? '160px' : '192px',
@@ -391,7 +428,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
 
                 {/* NEW LEFT: PROFILE & STATS PANEL (Desktop Only) */}
                 {!isMobile && (
-                    <div style={{ width: '480px', flexShrink: 0, height: '100%', borderRight: `1px solid ${THEME.panelBorder}` }}>
+                    <div style={{ width: isTablet ? '50%' : '480px', flexShrink: 0, height: '100%', borderRight: `1px solid ${THEME.panelBorder}` }}>
                         <WhiteKnightProfilePanel isMobile={isMobile} />
                     </div>
                 )}
@@ -417,20 +454,29 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         {/* Bot Avatar Large */}
                         <div
                             style={styles.botAvatarLarge}
-                            onClick={cycleDifficulty}
+                            onClick={isTablet ? handleStartGame : cycleDifficulty}
                             onMouseEnter={() => setHoveredBot(true)}
                             onMouseLeave={() => setHoveredBot(false)}
                         >
                             <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${THEME.accent}`, opacity: hoveredBot ? 0.4 : 0.2, filter: 'blur(1px)', transition: 'opacity 0.5s' }}></div>
 
-                            <div style={{ color: THEME.accent, transform: hoveredBot ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.5s' }}>
-                                {activeBot.icon}
+                            <div style={{ color: THEME.accent, transform: hoveredBot ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.5s', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                {isTablet ? (
+                                    <>
+                                        <Play size={40} fill="currentColor" />
+                                        <span style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '8px' }}>PLAY</span>
+                                    </>
+                                ) : (
+                                    activeBot.icon
+                                )}
                             </div>
 
                             {/* Level Badge */}
-                            <div style={{ position: 'absolute', bottom: '-12px', backgroundColor: THEME.accent, color: 'black', fontSize: '12px', fontWeight: 'bold', padding: '4px 12px', borderRadius: '999px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                Rating: {activeBot.rating}
-                            </div>
+                            {!isTablet && (
+                                <div style={{ position: 'absolute', bottom: '-12px', backgroundColor: THEME.accent, color: 'black', fontSize: '12px', fontWeight: 'bold', padding: '4px 12px', borderRadius: '999px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                                    Rating: {activeBot.rating}
+                                </div>
+                            )}
                         </div>
 
                         {/* INTERACTIVE SUMMARY GRID */}
@@ -509,10 +555,27 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                             }}
                         />
                     )}
+
+                    {/* TABLET: OPTIONS TOGGLE */}
+                    <div style={styles.optionsToggle} onClick={() => setShowRightPanel(true)}>
+                        <Settings size={20} style={{ color: THEME.accent }} className="animate-spin-slow" />
+                        <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: '10px', color: '#64748B', fontWeight: 'bold', letterSpacing: '0.1em' }}>OPTIONS</span>
+                    </div>
+
                 </div>
 
                 {/* RIGHT: SETTINGS PANEL */}
                 <div style={styles.rightPanel}>
+
+                    {/* TABLET BACK BUTTON */}
+                    {isTablet && (
+                        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${THEME.panelBorder}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button onClick={() => setShowRightPanel(false)} style={styles.closeButton}>
+                                <ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} />
+                            </button>
+                            <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>GAME OPTIONS</span>
+                        </div>
+                    )}
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '24px 16px' : '32px 30px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
@@ -722,6 +785,16 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                                 </button>
                             </div>
                         </div>
+
+                        {/* TABLET START BUTTON IN MENU */}
+                        {isTablet && (
+                            <button
+                                onClick={handleStartGame}
+                                style={{ ...styles.startGameBtn, marginTop: 'auto' }}
+                            >
+                                <Play size={20} fill="currentColor" /> Start Game
+                            </button>
+                        )}
 
                     </div>
 
