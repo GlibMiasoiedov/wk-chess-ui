@@ -1544,102 +1544,104 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                                 <Layers size={14} style={{ color: '#D4AF37' }} />
                                                 <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.1em' }}>Engine Analysis</span>
                                             </div>
-                                            <span style={{ backgroundColor: '#1A1E26', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'monospace', color: '#64748B', border: '1px solid #2A303C' }}>Stockfish</span>
+                                            <span style={{ backgroundColor: '#1A1E26', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'monospace', color: '#64748B', border: '1px solid #2A303C' }}>Stockfish 16 • Depth 15</span>
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {/* Best Line (Green) */}
                                             {(() => {
+                                                // Get variations from current analysis data
                                                 const currentAnalysis = analysisData?.[currentMoveIndex];
-                                                const evalValue = isExploring ? explorationAnalysis?.eval : (currentAnalysis?.eval || 0);
-                                                const pvSan = isExploring ? (explorationAnalysis?.pvSan || []) : (currentAnalysis?.pvSan || []);
+                                                // If exploring, we use the single exploration result, otherwise we use the stored MultiPV variations
+                                                let variations = [];
 
-                                                if (!pvSan || pvSan.length === 0) return null;
+                                                if (isExploring && explorationAnalysis) {
+                                                    // Exploration currently returns single best line, wrap it
+                                                    variations = [{
+                                                        eval: explorationAnalysis.eval,
+                                                        pvSan: explorationAnalysis.pvSan,
+                                                        bestMove: explorationAnalysis.bestMove
+                                                    }];
+                                                    // If we add MultiPV to exploration later, this adapts automatically
+                                                    if (explorationAnalysis.variations) {
+                                                        variations = explorationAnalysis.variations;
+                                                    }
+                                                } else if (currentAnalysis) {
+                                                    variations = currentAnalysis.variations || [];
+                                                    // Fallback if variations array is missing but we have main line
+                                                    if (!variations.length && currentAnalysis.bestMove) {
+                                                        variations = [{
+                                                            eval: currentAnalysis.eval,
+                                                            pvSan: currentAnalysis.pvSan,
+                                                            bestMove: currentAnalysis.bestMove
+                                                        }];
+                                                    }
+                                                }
 
-                                                console.log('[Analysis] Generated Arrows:', pvSan); // Added console.log here
+                                                if (!variations || variations.length === 0) {
+                                                    return <div style={{ color: '#64748B', fontSize: '11px', padding: '8px', fontStyle: 'italic' }}>Waiting for engine...</div>;
+                                                }
 
-                                                return (
-                                                    <div
-                                                        style={{
+                                                // Limit to 2 lines (or 3 for Pro)
+                                                return variations.slice(0, isProMode ? 3 : 2).map((variation, index) => {
+                                                    // Determine color based on index (Best=Green, 2nd=Yellow, 3rd=Blue)
+                                                    const color = index === 0 ? '#4ADE80' : index === 1 ? '#FACC15' : '#3B82F6';
+                                                    const bgColor = index === 0 ? 'rgba(74, 222, 128, 0.1)' : index === 1 ? 'rgba(250, 204, 21, 0.1)' : 'rgba(59, 130, 246, 0.1)';
+                                                    const borderColor = index === 0 ? 'rgba(74, 222, 128, 0.2)' : index === 1 ? 'rgba(250, 204, 21, 0.2)' : 'rgba(59, 130, 246, 0.2)';
+
+                                                    // Sanitize Evaluation
+                                                    const evalNum = typeof variation.eval === 'number' ? variation.eval : 0;
+                                                    const evalText = evalNum > 0 ? `+${evalNum.toFixed(2)}` : evalNum.toFixed(2);
+
+                                                    // Sanitize PV
+                                                    // Logic: PV might be stored as UCI array in 'pv' or SAN array in 'pvSan'.
+                                                    // We need SAN for display. If only UCI is available, we might need to convert or show generic text.
+                                                    // In 'analyzeGame', we passed 'variations' from 'analyzePosition'.
+                                                    // 'analyzePosition' logic in StockfishAnalyzer currently only returns UCI 'pv'.
+                                                    // MISSING LINK: We need to convert UCI variations to SAN!
+                                                    // For now, if pvSan is missing, show "Loading..." or raw moves if acceptable? 
+                                                    // Actually, 'analyzeGame' loop does convert the *main* line to SAN. But the *variations* inside it might just be UCI.
+
+                                                    let moveText = '';
+                                                    if (variation.pvSan && variation.pvSan.length) {
+                                                        moveText = variation.pvSan.slice(0, 5).join(' ');
+                                                    } else if (variation.pv && variation.pv.length) {
+                                                        // Fallback to displaying UCI if SAN conversion missing for 2nd/3rd lines
+                                                        // Ideally we fix this in backend, but for UI resilience:
+                                                        moveText = variation.pv.slice(0, 5).join(' ');
+                                                    }
+
+                                                    return (
+                                                        <div key={index} style={{
                                                             backgroundColor: '#151922',
                                                             border: '1px solid #2A303C',
-                                                            borderLeft: '2px solid #4ADE80',
+                                                            borderLeft: `2px solid ${color}`,
                                                             borderRadius: '6px',
                                                             padding: '10px 12px',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '10px',
-                                                            cursor: 'pointer',
-                                                            transition: 'background-color 0.15s'
-                                                        }}
-                                                    >
-                                                        <span style={{
-                                                            color: '#4ADE80',
-                                                            fontWeight: 'bold',
-                                                            fontSize: '12px',
-                                                            fontFamily: 'monospace',
-                                                            backgroundColor: 'rgba(74, 222, 128, 0.1)',
-                                                            padding: '2px 6px',
-                                                            borderRadius: '4px',
-                                                            minWidth: '50px',
-                                                            textAlign: 'right'
+                                                            cursor: 'pointer'
                                                         }}>
-                                                            {evalValue >= 0 ? '+' : ''}{evalValue?.toFixed(2)}
-                                                        </span>
-                                                        <span style={{ flex: 1, color: '#E2E8F0', fontSize: '12px', fontFamily: 'monospace', opacity: 0.9 }}>
-                                                            {pvSan.slice(0, 6).join(' ')}{pvSan.length > 6 ? ' ...' : ''}
-                                                        </span>
-                                                        <span style={{ color: '#64748B', fontSize: '9px', fontWeight: 'bold' }}>D:22</span>
-                                                    </div>
-                                                );
-                                            })()}
-
-                                            {/* Alternative Line (Yellow) */}
-                                            {(() => {
-                                                const currentAnalysis = analysisData?.[currentMoveIndex];
-                                                const evalValue = isExploring ? explorationAnalysis?.eval : (currentAnalysis?.eval || 0);
-                                                const pvSan = isExploring ? (explorationAnalysis?.pvSan || []) : (currentAnalysis?.pvSan || []);
-
-                                                if (!pvSan || pvSan.length === 0) return null;
-
-                                                // Show alternative line with slightly lower eval
-                                                const altEval = evalValue - 2.1;
-
-                                                return (
-                                                    <div
-                                                        style={{
-                                                            backgroundColor: '#151922',
-                                                            border: '1px solid #2A303C',
-                                                            borderLeft: '2px solid #FACC15',
-                                                            borderRadius: '6px',
-                                                            padding: '10px 12px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '10px',
-                                                            cursor: 'pointer',
-                                                            opacity: 0.7,
-                                                            transition: 'all 0.15s'
-                                                        }}
-                                                    >
-                                                        <span style={{
-                                                            color: '#FACC15',
-                                                            fontWeight: 'bold',
-                                                            fontSize: '12px',
-                                                            fontFamily: 'monospace',
-                                                            backgroundColor: 'rgba(250, 204, 21, 0.1)',
-                                                            padding: '2px 6px',
-                                                            borderRadius: '4px',
-                                                            minWidth: '50px',
-                                                            textAlign: 'right'
-                                                        }}>
-                                                            {altEval >= 0 ? '+' : ''}{altEval?.toFixed(2)}
-                                                        </span>
-                                                        <span style={{ flex: 1, color: '#94A3B8', fontSize: '12px', fontFamily: 'monospace' }}>
-                                                            {pvSan.length > 1 ? pvSan.slice(1, 6).join(' ') : pvSan.slice(0, 5).join(' ')}{pvSan.length > 5 ? ' ...' : ''}
-                                                        </span>
-                                                        <span style={{ color: '#64748B', fontSize: '9px', fontWeight: 'bold' }}>D:20</span>
-                                                    </div>
-                                                );
+                                                            <span style={{
+                                                                color: color,
+                                                                fontWeight: 'bold',
+                                                                fontSize: '12px',
+                                                                fontFamily: 'monospace',
+                                                                backgroundColor: bgColor,
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                minWidth: '50px',
+                                                                textAlign: 'right'
+                                                            }}>
+                                                                {evalText}
+                                                            </span>
+                                                            <span style={{ flex: 1, color: '#E2E8F0', fontSize: '12px', fontFamily: 'monospace', opacity: 0.9 }}>
+                                                                {moveText} {variation.pv?.length > 5 ? '...' : ''}
+                                                            </span>
+                                                            <span style={{ color: '#64748B', fontSize: '9px', fontWeight: 'bold' }}>D:15</span>
+                                                        </div>
+                                                    );
+                                                });
                                             })()}
                                         </div>
                                     </div>
