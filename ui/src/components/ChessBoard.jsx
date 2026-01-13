@@ -55,7 +55,7 @@ function ChessBoardInternal({
 }) {
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(400);
-    const [moveHintSquares, setMoveHintSquares] = useState([]);
+    const [optionSquares, setOptionSquares] = useState({});
     const [currentPosition, setCurrentPosition] = useState(position);
     const [moveFrom, setMoveFrom] = useState(null);
 
@@ -86,25 +86,14 @@ function ChessBoardInternal({
 
     // Custom square styles
     const customSquareStyles = useMemo(() => {
-        const styles = {};
+        const styles = { ...optionSquares }; // Start with move options
+
         if (highlightSquares?.length) {
             highlightSquares.forEach(sq => {
-                if (sq) styles[sq] = { backgroundColor: 'rgba(186, 166, 121, 0.55)' };
+                if (sq) styles[sq] = { ...styles[sq], backgroundColor: 'rgba(186, 166, 121, 0.55)' };
             });
         }
-        if (moveHintSquares?.length) {
-            moveHintSquares.forEach(sq => {
-                if (sq) {
-                    styles[sq] = {
-                        ...styles[sq],
-                        background: styles[sq]?.backgroundColor
-                            ? `radial-gradient(circle, rgba(0,0,0,0.2) 25%, transparent 25%), ${styles[sq].backgroundColor}`
-                            : 'radial-gradient(circle, rgba(0,0,0,0.2) 25%, transparent 25%)',
-                        backgroundSize: '100% 100%'
-                    };
-                }
-            });
-        }
+
         // Highlight selected piece (moveFrom)
         if (moveFrom) {
             styles[moveFrom] = {
@@ -114,31 +103,42 @@ function ChessBoardInternal({
         }
 
         return styles;
-    }, [highlightSquares, moveHintSquares, moveFrom]);
+    }, [highlightSquares, optionSquares, moveFrom]);
 
     // Click handler for "Click to Move"
     const onSquareClick = useCallback((square) => {
         if (disabled) return;
 
         // Visual feedback helper
-        const highlightMoves = (sq) => {
-            if (getValidMoves) {
-                const moves = getValidMoves(sq);
-                if (moves && moves.length > 0) {
-                    setMoveHintSquares(moves);
-                    return true;
-                }
+        const getMoveOptions = (sq) => {
+            if (!getValidMoves) {
+                setOptionSquares({});
+                return false;
             }
-            return false;
+            const moves = getValidMoves(sq);
+            if (!moves || moves.length === 0) {
+                setOptionSquares({});
+                return false;
+            }
+
+            const newSquares = {};
+            moves.forEach((moveSq) => {
+                newSquares[moveSq] = {
+                    background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
+                    borderRadius: '50%'
+                };
+            });
+            newSquares[sq] = {
+                background: 'rgba(255, 255, 0, 0.4)'
+            };
+            setOptionSquares(newSquares);
+            return true;
         };
 
         // Case 1: No piece selected yet
         if (!moveFrom) {
-            const moves = getValidMoves ? getValidMoves(square) : [];
-            if (moves && moves.length > 0) {
-                setMoveFrom(square);
-                setMoveHintSquares(moves);
-            }
+            const hasOptions = getMoveOptions(square);
+            if (hasOptions) setMoveFrom(square);
             return;
         }
 
@@ -150,21 +150,20 @@ function ChessBoardInternal({
             if (result === true || result?.valid === true) {
                 // Move successful
                 setMoveFrom(null);
-                setMoveHintSquares([]);
+                setOptionSquares({});
                 return;
             }
         }
 
         // Move invalid.
         // Check if user clicked on another friendly piece (change selection)
-        const moves = getValidMoves ? getValidMoves(square) : [];
-        if (moves && moves.length > 0) {
+        const hasOptions = getMoveOptions(square);
+        if (hasOptions) {
             setMoveFrom(square);
-            setMoveHintSquares(moves);
         } else {
             // Deselect
             setMoveFrom(null);
-            setMoveHintSquares([]);
+            setOptionSquares({});
         }
     }, [disabled, moveFrom, getValidMoves, onMove]);
 
