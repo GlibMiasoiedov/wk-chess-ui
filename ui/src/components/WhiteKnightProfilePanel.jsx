@@ -828,6 +828,34 @@ const cssStyles = `
   .wkp-spacer {
     height: 10px !important;
   }
+
+  /* MEDIA QUERIES FOR SMALLER SCREENS (e.g. Laptops 1366x768) */
+  @media (max-height: 900px) {
+    .wkp-scroll {
+      gap: 10px !important;
+      padding: 14px !important;
+    }
+    .wkp-profile-card {
+      padding: 10px !important;
+      gap: 10px !important;
+    }
+    .wkp-avatar {
+      width: 42px !important;
+      height: 42px !important;
+      min-width: 42px !important;
+    }
+    .wkp-profile-info h3 { font-size: 14px !important; }
+    .wkp-stats-grid { gap: 8px !important; }
+    .wkp-stat-box { 
+      min-height: 60px !important; 
+      padding: 8px !important; 
+    }
+    .wkp-stat-value { font-size: 18px !important; }
+    .wkp-awards-grid { gap: 6px !important; }
+    .wkp-award-item { padding: 8px !important; }
+    .wkp-schedule-card { padding: 12px !important; }
+    .wkp-schedule-bg { width: 60px !important; height: 60px !important; }
+  }
 `;
 
 // --- DATA LOGIC ---
