@@ -170,16 +170,26 @@ function ChessBoardInternal({
 
     // Handlers
     const onPieceDragBegin = useCallback((piece, sourceSquare) => {
-        setMoveFrom(sourceSquare); // Sync drag with click selection
+        setMoveFrom(sourceSquare);
         if (showMoveHints && getValidMoves) {
-            const valid = getValidMoves(sourceSquare);
-            if (valid?.length) setMoveHintSquares(valid);
+            const moves = getValidMoves(sourceSquare);
+            if (moves?.length) {
+                const newSquares = {};
+                moves.forEach((moveSq) => {
+                    newSquares[moveSq] = {
+                        background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
+                        borderRadius: '50%'
+                    };
+                });
+                newSquares[sourceSquare] = { background: 'rgba(255, 255, 0, 0.4)' };
+                setOptionSquares(newSquares);
+            }
         }
     }, [showMoveHints, getValidMoves]);
 
     const onPieceDragEnd = useCallback(() => {
         setMoveFrom(null);
-        setMoveHintSquares([]);
+        setOptionSquares({});
     }, []);
 
     // FIX v1.28: react-chessboard v5.x passes single object
@@ -192,7 +202,7 @@ function ChessBoardInternal({
         console.log('[ChessBoard] onDrop:', { sourceSquare, targetSquare, piece });
 
         setMoveFrom(null); // Clear selection on drop
-        setMoveHintSquares([]);
+        setOptionSquares({});
 
         if (disabled) return false;
 
