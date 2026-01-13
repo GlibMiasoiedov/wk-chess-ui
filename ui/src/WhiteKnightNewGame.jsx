@@ -236,7 +236,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'flex-start',
-            padding: isMobile ? '32px 16px 120px 16px' : '48px 32px',
+            padding: isMobile ? '32px 16px 120px 16px' : '24px 32px',
             position: 'relative',
             overflow: 'hidden',
             overflowY: isMobile ? 'auto' : 'hidden'
@@ -262,7 +262,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
             justifyContent: 'center',
             boxShadow: '0 0 60px rgba(0,0,0,0.5)',
             position: 'relative',
-            marginBottom: '32px',
+            marginBottom: '0px',
             transition: 'transform 0.5s',
             transform: hoveredBot ? 'scale(1.05)' : 'scale(1)',
             cursor: 'pointer'
@@ -380,11 +380,11 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         <div style={{ position: 'absolute', top: '25%', left: '25%', width: '384px', height: '384px', backgroundColor: THEME.accent, borderRadius: '50%', filter: 'blur(150px)' }}></div>
                     </div>
 
-                    <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '384px', gap: '32px' }}>
+                    <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '384px', gap: '24px' }}>
 
                         {/* Match Title */}
                         <div style={{ textAlign: 'center' }}>
-                            <h1 style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>
+                            <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>
                                 White Knight <span style={{ color: THEME.accent }}>{activeBot.name}</span>
                             </h1>
                             <p style={{ color: '#64748B', fontSize: '14px', fontWeight: 500 }}>vs Hero User</p>
@@ -488,7 +488,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                 {/* RIGHT: SETTINGS PANEL */}
                 <div style={styles.rightPanel}>
 
-                    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '24px 16px' : '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '24px 16px' : '32px 30px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
                         {/* 0. LEARNING BANNER */}
                         <div
@@ -499,7 +499,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                                 background: 'linear-gradient(to right, #1A1E26, #0F1116)',
                                 border: '1px solid rgba(212,175,55,0.3)',
                                 borderRadius: '12px',
-                                padding: '16px',
+                                padding: '18px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
