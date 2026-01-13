@@ -64,15 +64,20 @@ export default function App() {
   };
 
   return (
-    <div style={{
-      height: '100%',
-      width: '100%',
-      backgroundColor: '#0B0E14',
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden'
-    }}>
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: '#0B0E14',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
       {/* Main content */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {screen === 'setup' && (

@@ -7,6 +7,7 @@ import {
     LayoutGrid, ChevronDown, Settings, Dna, HelpCircle
 } from 'lucide-react';
 import DebugConsole from './components/DebugConsole.jsx';
+import WhiteKnightProfilePanel from './components/WhiteKnightProfilePanel.jsx';
 
 // --- THEME CONSTANTS ---
 const THEME = {
@@ -364,7 +365,14 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
             {/* --- CONTENT ROW --- */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-                {/* LEFT: VISUAL PREVIEW & SUMMARY (Desktop Only) */}
+                {/* NEW LEFT: PROFILE & STATS PANEL (Desktop Only) */}
+                {!isMobile && (
+                    <div style={{ width: '350px', flexShrink: 0, height: '100%', borderRight: `1px solid ${THEME.panelBorder}` }}>
+                        <WhiteKnightProfilePanel isMobile={isMobile} />
+                    </div>
+                )}
+
+                {/* CENTER: VISUAL PREVIEW & SUMMARY (Was Left Panel) */}
                 <div style={styles.leftPanel}>
 
                     {/* Background Decoration */}
