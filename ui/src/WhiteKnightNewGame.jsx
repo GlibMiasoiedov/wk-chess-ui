@@ -471,19 +471,17 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
 
                     {/* Debug Console - Desktop Only */}
                     {!isMobile && (
-                        <div style={{ position: 'fixed', bottom: '16px', left: '16px', width: '400px', maxHeight: '300px', zIndex: 1000, opacity: 0.9 }}>
-                            <DebugConsole
-                                botLevel={activeBot.name}
-                                playerColor={selectedColor}
-                                gameInfo={{
-                                    moveCount: 0,
-                                    hasAnalysis: false,
-                                    selectedBotIndex: selectedBotIndex,
-                                    selectedTime: selectedTime,
-                                    screen: 'new-game-desktop'
-                                }}
-                            />
-                        </div>
+                        <DebugConsole
+                            botLevel={activeBot.name}
+                            playerColor={selectedColor}
+                            gameInfo={{
+                                moveCount: 0,
+                                hasAnalysis: false,
+                                selectedBotIndex: selectedBotIndex,
+                                selectedTime: selectedTime,
+                                screen: 'new-game-desktop'
+                            }}
+                        />
                     )}
                 </div>
 

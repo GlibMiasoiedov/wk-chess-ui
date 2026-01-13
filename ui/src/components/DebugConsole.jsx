@@ -77,6 +77,11 @@ const DebugConsole = ({ botLevel, playerColor, gameInfo }) => {
     const [logs, setLogs] = useState([...globalLogs]);
     const logsEndRef = useRef(null);
 
+    // Draggable State
+    const [position, setPosition] = useState({ x: 16, y: window.innerHeight - 320 }); // Initial bottom-left
+    const [isDragging, setIsDragging] = useState(false);
+    const dragOffset = useRef({ x: 0, y: 0 });
+
     useEffect(() => {
         // Subscribe to log updates
         const handler = (newLogs) => setLogs(newLogs);
@@ -93,6 +98,43 @@ const DebugConsole = ({ botLevel, playerColor, gameInfo }) => {
             logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [logs, isExpanded]);
+
+    // Drag Handlers
+    const handleMouseDown = (e) => {
+        setIsDragging(true);
+        dragOffset.current = {
+            x: e.clientX - position.x,
+            y: e.clientY - position.y
+        };
+        e.preventDefault(); // Prevent text selection
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            setPosition({
+                x: e.clientX - dragOffset.current.x,
+                y: e.clientY - dragOffset.current.y
+            });
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        } else {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging]);
 
     const clearLogs = () => {
         globalLogs = [];
@@ -122,26 +164,37 @@ Time: ${new Date().toISOString()}
 
     return (
         <div style={{
+            position: 'fixed',
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            width: '400px',
+            maxHeight: '300px',
+            zIndex: 99999, // Highest z-index to drag over everything
             backgroundColor: '#151922',
             border: '1px solid #2A303C',
             borderRadius: '6px',
-            marginTop: '12px',
             overflow: 'hidden',
-            fontSize: '12px'
+            fontSize: '12px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+            opacity: isDragging ? 0.8 : 0.95,
+            transition: isDragging ? 'none' : 'opacity 0.2s'
         }}>
-            {/* Header with Action Buttons */}
+            {/* Header with Action Buttons - DRAGGABLE HANDLE */}
             <div
+                onMouseDown={handleMouseDown}
                 style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '8px 12px',
-                    backgroundColor: '#1A1E26',
-                    borderBottom: isExpanded ? '1px solid #2A303C' : 'none'
+                    backgroundColor: isDragging ? '#2A303C' : '#1A1E26',
+                    borderBottom: isExpanded ? '1px solid #2A303C' : 'none',
+                    cursor: 'grab',
+                    userSelect: 'none'
                 }}
             >
                 <div
-                    onClick={() => setIsExpanded(!isExpanded)}
+                    onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
                 >
                     <Bug size={14} style={{ color: '#D4AF37' }} />
@@ -155,7 +208,7 @@ Time: ${new Date().toISOString()}
                 </div>
 
                 {/* Action buttons - Always visible in header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onMouseDown={(e) => e.stopPropagation()}>
                     <button
                         onClick={(e) => { e.stopPropagation(); clearLogs(); }}
                         style={{

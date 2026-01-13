@@ -609,19 +609,17 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
 
                     </div>
 
-                    {/* Debug Console - Desktop Only (Fixed Position) */}
+                    {/* Debug Console - Desktop Only */}
                     {!isMobile && (
-                        <div style={{ position: 'fixed', bottom: '16px', left: '16px', width: '400px', maxHeight: '300px', zIndex: 1000, opacity: 0.9 }}>
-                            <SafeDebugConsole
-                                botLevel={botInfo.name}
-                                playerColor={gameState?.playerColor}
-                                gameInfo={{
-                                    moveCount: gameState?.moveHistory?.length || 0,
-                                    currentTurn: activeTurn,
-                                    isGameOver: gameState?.isGameOver
-                                }}
-                            />
-                        </div>
+                        <SafeDebugConsole
+                            botLevel={botInfo.name}
+                            playerColor={gameState?.playerColor}
+                            gameInfo={{
+                                moveCount: gameState?.moveHistory?.length || 0,
+                                currentTurn: activeTurn,
+                                isGameOver: gameState?.isGameOver
+                            }}
+                        />
                     )}
                 </div>
 
