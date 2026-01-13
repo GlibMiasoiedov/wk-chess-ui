@@ -499,7 +499,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                                 background: 'linear-gradient(to right, #1A1E26, #0F1116)',
                                 border: '1px solid rgba(212,175,55,0.3)',
                                 borderRadius: '12px',
-                                padding: '18px',
+                                padding: '24px 20px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
