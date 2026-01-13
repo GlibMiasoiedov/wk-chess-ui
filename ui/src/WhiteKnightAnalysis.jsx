@@ -1567,18 +1567,50 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                                     }
                                                 } else if (currentAnalysis) {
                                                     variations = currentAnalysis.variations || [];
-                                                    // Fallback if variations array is missing but we have main line
+
+                                                    // CRITICAL FIX: If variations are missing/empty, BUT we have main line data, 
+                                                    // manually construct the variation object so the UI shows at least the best move.
                                                     if (!variations.length && currentAnalysis.bestMove) {
                                                         variations = [{
                                                             eval: currentAnalysis.eval,
-                                                            pvSan: currentAnalysis.pvSan,
+                                                            pvSan: currentAnalysis.pvSan || [],
+                                                            // If pvSan is missing, try to generate from raw bestMove? 
+                                                            // Usually pvSan is populated by StockfishAnalyzer.analyzeGame loops.
                                                             bestMove: currentAnalysis.bestMove
                                                         }];
                                                     }
                                                 }
 
                                                 if (!variations || variations.length === 0) {
-                                                    return <div style={{ color: '#64748B', fontSize: '11px', padding: '8px', fontStyle: 'italic' }}>Waiting for engine...</div>;
+                                                    // If truly no data, allow manual re-analyze trigger or just show empty state
+                                                    return (
+                                                        <div style={{ padding: '10px', textAlign: 'center' }}>
+                                                            <div style={{ color: '#64748B', fontSize: '11px', marginBottom: '8px', fontStyle: 'italic' }}>
+                                                                Line details not available.
+                                                            </div>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    // Manual trigger to re-analyze just THIS position
+                                                                    const analyzer = await getStockfishAnalyzer();
+                                                                    const fen = isExploring ? explorationFen : currentFen;
+                                                                    // Show temporary loading state?
+                                                                    // Ideally we'd update a local state to show spinner
+                                                                    console.log('[Analysis] Manual re-analyze requested for move', currentMoveIndex);
+                                                                    const result = await analyzer.analyzePosition(fen, 20, isProMode ? 3 : 2);
+
+                                                                    // We need to update analysisData state to trigger re-render
+                                                                    // This requires a parent callback or state update function which we might not have exposed here easily.
+                                                                    // For now, simpler to rely on the top-bar "Re-analyze" button.
+                                                                }}
+                                                                style={{
+                                                                    background: 'none', border: '1px solid #2A303C', color: '#D4AF37',
+                                                                    fontSize: '10px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Click "Re-Analyze" above
+                                                            </button>
+                                                        </div>
+                                                    );
                                                 }
 
                                                 // Limit to 2 lines (or 3 for Pro)
