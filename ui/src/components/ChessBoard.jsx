@@ -106,8 +106,13 @@ function ChessBoardInternal({
     }, [highlightSquares, optionSquares, moveFrom]);
 
     // Click handler for "Click to Move"
-    const onSquareClick = useCallback((square) => {
+    const onSquareClick = useCallback((arg) => {
         if (disabled) return;
+
+        // v5 support: arg might be string (legacy) or object { square, piece }
+        const square = typeof arg === 'string' ? arg : arg?.square;
+
+        if (!square) return;
 
         // Visual feedback helper
         const getMoveOptions = (sq) => {
