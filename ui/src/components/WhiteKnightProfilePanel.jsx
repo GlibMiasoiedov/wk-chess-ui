@@ -978,6 +978,8 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
       if (window.confirm("Are you sure you want to disconnect Chess.com?")) {
         setChesscomConnected(false);
         setChesscomUsername("");
+        setChesscomProfile(null);
+        setChesscomStats(null);
       }
     } else {
       setShowChesscomModal(true);
@@ -985,7 +987,16 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
   };
 
   const handleChesscomConnect = async () => {
-    const username = chesscomUsername.trim().toLowerCase();
+    let username = chesscomUsername.trim().toLowerCase();
+
+    // Parse profile URL if provided (e.g., https://www.chess.com/member/username)
+    if (username.includes('chess.com/member/')) {
+      const parts = username.split('/member/');
+      if (parts[1]) {
+        username = parts[1].split('/')[0].split('?')[0]; // Remove trailing paths/params
+      }
+    }
+
     if (username.length < 3) {
       setChesscomError('Username must be at least 3 characters');
       return;
@@ -1067,22 +1078,26 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
 
             {/* Right: Connect Buttons Column */}
             <div className="wkp-profile-actions">
-              <button
-                className={`wkp-btn-mini chesscom ${chesscomConnected ? 'connected' : ''}`}
-                onClick={handleChesscomClick}
-                title={chesscomConnected ? "Disconnect Chess.com" : "Connect Chess.com"}
-              >
-                {chesscomConnected ? <Unlink size={12} /> : <Link2 size={12} />}
-                {chesscomConnected ? chesscomUsername : 'Chess.com'}
-              </button>
-              <button
-                className={`wkp-btn-mini lichess ${lichessConnected ? 'connected' : ''}`}
-                onClick={handleLichessClick}
-                title={lichessConnected ? "Disconnect Lichess" : "Connect Lichess"}
-              >
-                {lichessConnected ? <Unlink size={12} /> : <Link2 size={12} />}
-                {lichessConnected ? 'Lichess ✓' : 'Lichess'}
-              </button>
+              {!lichessConnected && (
+                <button
+                  className={`wkp-btn-mini chesscom ${chesscomConnected ? 'connected' : ''}`}
+                  onClick={handleChesscomClick}
+                  title={chesscomConnected ? "Disconnect Chess.com" : "Connect Chess.com"}
+                >
+                  {chesscomConnected ? <Unlink size={12} /> : <Link2 size={12} />}
+                  {chesscomConnected ? chesscomUsername : 'Chess.com'}
+                </button>
+              )}
+              {!chesscomConnected && (
+                <button
+                  className={`wkp-btn-mini lichess ${lichessConnected ? 'connected' : ''}`}
+                  onClick={handleLichessClick}
+                  title={lichessConnected ? "Disconnect Lichess" : "Connect Lichess"}
+                >
+                  {lichessConnected ? <Unlink size={12} /> : <Link2 size={12} />}
+                  {lichessConnected ? 'Lichess ✓' : 'Lichess'}
+                </button>
+              )}
             </div>
           </div>
 
