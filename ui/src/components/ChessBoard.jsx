@@ -271,12 +271,13 @@ function ChessBoardInternal({
                 onPieceDragBegin={onPieceDragBegin}
                 onPieceDragEnd={onPieceDragEnd}
                 isDraggablePiece={isDraggablePiece}
-                customSquareStyles={customSquareStyles}
                 customBoardStyle={{
                     borderRadius: '4px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
                     ...customBoardStyle
                 }}
+                squareStyles={customSquareStyles}
+                dropSquareStyle={{ boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' }}
                 customDarkSquareStyle={{ backgroundColor: '#779556' }}
                 customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
                 animationDuration={200}
