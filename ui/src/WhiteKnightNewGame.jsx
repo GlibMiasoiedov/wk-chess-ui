@@ -4,7 +4,7 @@ import { Chessboard } from 'react-chessboard';
 import {
     Crown, Zap, ChevronRight, Target, Shield, Sword,
     GraduationCap, Play, Clock, Flame, Rabbit, X,
-    LayoutGrid, ChevronDown, Settings, Dna, HelpCircle
+    LayoutGrid, ChevronDown, Settings, Dna, HelpCircle, Lock, User
 } from 'lucide-react';
 import DebugConsole from './components/DebugConsole.jsx';
 import WhiteKnightProfilePanel from './components/WhiteKnightProfilePanel.jsx';
@@ -86,6 +86,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
     const [isTimeExpanded, setIsTimeExpanded] = useState(false);
     const [selectedColor, setSelectedColor] = useState('random');
     const [gameMode, setGameMode] = useState('standard'); // 'standard' | '960'
+    const [showAuthModal, setShowAuthModal] = useState(false);
 
     // Hover states for JS-based hover effects
     const [hoveredStart, setHoveredStart] = useState(false);
@@ -334,7 +335,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         <LayoutGrid size={18} style={{ color: THEME.accent }} />
                     </div>
                     <span style={styles.headerTitle}>
-                        New Game
+                        New Game v2.9
                     </span>
                 </div>
 
@@ -350,6 +351,29 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                     </button>
 
                     {!isMobile && <div style={{ height: '16px', width: '1px', backgroundColor: '#2A303C' }}></div>}
+
+                    <button
+                        onClick={() => setShowAuthModal(true)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            color: '#94A3B8',
+                            background: 'none',
+                            border: '1px solid #2A303C',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <User size={16} />
+                        <span>Log In</span>
+                    </button>
 
                     <button
                         style={styles.closeButton}
@@ -715,6 +739,30 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
 
                 </div>
             </div>
+
+            {/* AUTH MODAL */}
+            {showAuthModal && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.9)', padding: '16px' }}>
+                    <div style={{ backgroundColor: '#151922', border: '1px solid #2A303C', padding: '24px', borderRadius: '8px', maxWidth: '340px', width: '100%', position: 'relative' }}>
+                        <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '12px', right: '12px', color: '#64748B', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                            <div style={{ width: '48px', height: '48px', backgroundColor: 'rgba(212,175,55,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', border: '1px solid rgba(212,175,55,0.3)' }}>
+                                <Lock size={24} style={{ color: '#D4AF37' }} />
+                            </div>
+                            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>Unlock Full Experience</h2>
+                            <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.4' }}>
+                                Sign up to play with unlimited AI analysis and get free access to the White Knight Academy Beginner Course.
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <input type="email" placeholder="Email address" style={{ width: '100%', backgroundColor: '#0B0E14', border: '1px solid #2A303C', padding: '10px 12px', color: 'white', borderRadius: '4px', boxSizing: 'border-box' }} />
+                            <button onClick={() => setShowAuthModal(false)} style={{ width: '100%', backgroundColor: '#D4AF37', color: '#0f172a', fontWeight: 'bold', padding: '12px', borderRadius: '4px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '12px' }}>
+                                Create Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

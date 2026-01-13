@@ -1,0 +1,6 @@
+open 45.84.204.95
+u436888800.whiteknight.academy
+Warszawa2026!
+cd wp-content/plugins/wk-chess-ui/dist/.vite
+put C:\Users\glibm\Desktop\wk-chess-ui\dist\.vite\manifest.json
+bye
