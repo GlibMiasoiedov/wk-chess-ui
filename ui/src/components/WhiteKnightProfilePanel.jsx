@@ -933,6 +933,11 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
 
   const userRating = calculateBestRating(chesscomStats);
   const totalGames = calculateTotalGames(chesscomStats);
+  const isConnected = chesscomConnected || lichessConnected;
+
+  // Display values: show placeholders if not connected
+  const displayRating = isConnected ? userRating : '---';
+  const displayGames = isConnected ? totalGames : '---';
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -1101,19 +1106,37 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
             </div>
           </div>
 
+          {/* Connection Prompt (Non-Logged Users) */}
+          {!isConnected && (
+            <div style={{
+              backgroundColor: 'rgba(212,175,55,0.05)',
+              border: '1px dashed rgba(212,175,55,0.3)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginTop: '12px',
+              textAlign: 'center'
+            }}>
+              <p style={{ color: '#94A3B8', fontSize: '11px', margin: 0, lineHeight: 1.4 }}>
+                Connect <strong style={{ color: '#D4AF37' }}>Chess.com</strong> or <strong style={{ color: '#D4AF37' }}>Lichess</strong> to display your stats
+              </p>
+            </div>
+          )}
+
           {/* Stats Grid */}
           <div className="wkp-stats-grid">
             <div className="wkp-stat-box">
               <span className="wkp-stat-label">Rating</span>
-              <span className="wkp-stat-value">{userRating}</span>
-              <span className="wkp-trend">
-                <TrendingUp size={10} /> +12
-              </span>
+              <span className="wkp-stat-value">{displayRating}</span>
+              {isConnected && (
+                <span className="wkp-trend">
+                  <TrendingUp size={10} /> +12
+                </span>
+              )}
             </div>
             <div className="wkp-stat-box">
               <span className="wkp-stat-label">Games</span>
-              <span className="wkp-stat-value">{totalGames}</span>
-              <span className="wkp-stat-sub">Total</span>
+              <span className="wkp-stat-value">{displayGames}</span>
+              {isConnected && <span className="wkp-stat-sub">Total</span>}
             </div>
           </div>
 
