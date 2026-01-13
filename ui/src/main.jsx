@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
@@ -11,7 +11,7 @@ const mountApp = () => {
 
   if (mountPoint) {
     try {
-      ReactDOM.createRoot(mountPoint).render(
+      createRoot(mountPoint).render(
         <React.StrictMode>
           <App />
         </React.StrictMode>
