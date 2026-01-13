@@ -243,7 +243,8 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
         resign,
         offerDraw,
         startGame,
-        stopClock
+        stopClock,
+        getLegalMoves
     } = useChessGame();
 
     const [boardOrientation, setBoardOrientation] = useState('white');
@@ -564,6 +565,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                                 position={gameState?.fen || 'start'}
                                 orientation={boardOrientation}
                                 onMove={handleMove}
+                                getValidMoves={getLegalMoves}
                                 highlightSquares={gameState?.moves?.length > 0 ? [gameState.moves[gameState.moves.length - 1].from, gameState.moves[gameState.moves.length - 1].to] : []}
                                 disabled={!gameStarted || gameState?.isGameOver}
                                 playerColor={gameState?.playerColor || playerColorRef.current}
