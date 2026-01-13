@@ -98,10 +98,10 @@ const cssStyles = `
   .wk-scroll-content {
     flex: 1;
     overflow-y: auto;
-    padding: 20px; /* Reduced from 24px for 350px width */
+    padding: 24px; /* Restored Premium Padding */
     display: flex;
     flex-direction: column;
-    gap: 16px; /* Reduced gap */
+    gap: 20px; /* Restored Gap */
     scrollbar-width: thin;
     scrollbar-color: var(--wk-border) var(--wk-bg);
   }
@@ -110,23 +110,23 @@ const cssStyles = `
   .wk-card-profile {
     display: flex;
     align-items: center;
-    gap: 12px; /* Compact gap */
-    padding: 12px; /* Compact padding */
+    gap: 16px; /* Restored Gap */
+    padding: 16px; /* Restored Padding */
     border-radius: 12px;
     background: linear-gradient(145deg, #1A1E26 0%, #111 100%);
     border: 1px solid var(--wk-border);
   }
 
   .wk-avatar {
-    width: 48px; /* Slightly smaller avatar */
-    height: 48px;
+    width: 64px; /* Restored Size */
+    height: 64px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--wk-accent) 0%, #B39352 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 18px;
+    font-size: 24px; /* Restored Font */
     color: #000;
     position: relative;
     box-shadow: var(--wk-shadow-glow);
@@ -135,27 +135,27 @@ const cssStyles = `
 
   .wk-status-dot {
     position: absolute;
-    bottom: 0; right: 0;
-    width: 12px; height: 12px;
+    bottom: 2px; right: 2px;
+    width: 14px; height: 14px;
     background-color: var(--wk-success);
     border: 2px solid #1A1E26;
     border-radius: 50%;
   }
 
   /* 2. Stats Grid */
-  .wk-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .wk-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
   .wk-stat-box {
     background-color: var(--wk-bg);
     border: 1px solid var(--wk-border);
-    padding: 10px;
-    border-radius: 10px;
+    padding: 16px; /* Restored Padding */
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-height: 80px;
+    min-height: 90px;
     transition: all 0.2s;
   }
   .wk-stat-box:hover {
@@ -165,38 +165,38 @@ const cssStyles = `
 
   .wk-label-mini {
     color: var(--wk-text-muted);
-    font-size: 9px;
+    font-size: 10px; /* Restored Font */
     text-transform: uppercase;
     font-weight: 700;
     letter-spacing: 0.1em;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
   .wk-value-large {
     color: var(--wk-text-main);
     font-family: monospace;
-    font-size: 20px; /* Reduced font */
+    font-size: 24px; /* Restored Font */
     font-weight: 700;
     line-height: 1.1;
   }
 
   .wk-trend {
     color: var(--wk-success);
-    font-size: 9px;
+    font-size: 10px;
     display: flex;
     align-items: center;
-    gap: 2px;
-    margin-top: 4px;
+    gap: 4px;
+    margin-top: 6px;
     background-color: rgba(74, 222, 128, 0.1);
-    padding: 2px 6px;
+    padding: 2px 8px;
     border-radius: 4px;
   }
 
   /* --- CONNECT ACCOUNTS (Top Bar) --- */
   .wk-connect-bar {
     display: flex;
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: 12px; /* Restored Gap */
+    margin-bottom: 8px;
     width: 100%;
   }
 
@@ -205,10 +205,10 @@ const cssStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 8px; /* Compact */
-    border-radius: 6px;
-    font-size: 10px; /* Compact font */
+    gap: 8px;
+    padding: 12px; /* Restored Padding */
+    border-radius: 8px;
+    font-size: 11px; /* Restored Font */
     font-weight: 800; 
     text-transform: uppercase;
     cursor: pointer;
@@ -276,30 +276,30 @@ const cssStyles = `
     background-color: var(--wk-panel);
     border: 1px solid var(--wk-border);
     border-radius: 16px;
-    padding: 24px;
+    padding: 32px; /* Restored Padding */
     width: 100%;
-    max-width: 300px; /* fit within sidebar */
+    max-width: 360px; /* Restored Width */
     box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     position: relative;
     animation: slideUp 0.2s ease-out;
   }
 
   .wk-modal-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;
   }
-  .wk-modal-title { color: white; font-weight: bold; font-size: 14px; }
+  .wk-modal-title { color: white; font-weight: bold; font-size: 16px; }
   
-  .wk-input-group { margin-bottom: 16px; }
-  .wk-input-label { display: block; color: var(--wk-text-muted); font-size: 10px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase; }
+  .wk-input-group { margin-bottom: 24px; }
+  .wk-input-label { display: block; color: var(--wk-text-muted); font-size: 11px; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; }
   .wk-text-input {
     width: 100%; background: #0B0E14; border: 1px solid var(--wk-border);
-    border-radius: 8px; padding: 10px; color: white; font-size: 13px;
+    border-radius: 8px; padding: 12px; color: white; font-size: 14px;
   }
   .wk-text-input:focus { outline: none; border-color: var(--wk-accent); }
 
   .wk-btn-primary {
-    width: 100%; padding: 10px; background: var(--wk-accent); color: black;
-    border: none; border-radius: 8px; font-weight: bold; font-size: 11px;
+    width: 100%; padding: 12px; background: var(--wk-accent); color: black;
+    border: none; border-radius: 8px; font-weight: bold; font-size: 12px;
     cursor: pointer; text-transform: uppercase;
   }
   .wk-btn-primary:hover { background: var(--wk-accent-hover); }
@@ -312,7 +312,7 @@ const cssStyles = `
   .wk-awards-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 12px;
   }
 
   .wk-award-item-compact {
@@ -320,8 +320,8 @@ const cssStyles = `
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 12px;
-    border-radius: 10px;
+    padding: 16px; /* Restored Padding */
+    border-radius: 12px;
     border: 1px solid var(--wk-border);
     background-color: var(--wk-bg);
     cursor: pointer;
@@ -330,11 +330,11 @@ const cssStyles = `
   .wk-award-item-compact:hover { border-color: rgba(212, 175, 55, 0.4); }
   
   .wk-award-icon-box {
-    padding: 8px;
-    border-radius: 6px;
+    padding: 12px;
+    border-radius: 8px;
     background-color: rgba(212, 175, 55, 0.1);
     color: var(--wk-accent);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
   /* 4. Schedule Card */
