@@ -889,7 +889,6 @@ const MOCK_EVENTS = [
 ];
 
 export default function WhiteKnightProfilePanel({ isMobile }) {
-  const [userRating] = useState(1450);
   const [activeCategory, setActiveCategory] = useState('middle');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -899,6 +898,41 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
   const [chesscomConnected, setChesscomConnected] = useState(false);
   const [chesscomUsername, setChesscomUsername] = useState("");
   const [showChesscomModal, setShowChesscomModal] = useState(false);
+  const [chesscomLoading, setChesscomLoading] = useState(false);
+  const [chesscomError, setChesscomError] = useState("");
+
+  // Chess.com Profile Data
+  const [chesscomProfile, setChesscomProfile] = useState(null);
+  const [chesscomStats, setChesscomStats] = useState(null);
+
+  // Derived display values
+  const displayName = chesscomProfile?.name || chesscomProfile?.username || 'Hero User';
+  const displayAvatar = chesscomProfile?.avatar || null;
+  const displayTitle = chesscomProfile?.title || null;
+
+  // Calculate best rating from stats (max of blitz/rapid/bullet)
+  const calculateBestRating = (stats) => {
+    if (!stats) return 1450;
+    const blitz = stats.chess_blitz?.last?.rating || 0;
+    const rapid = stats.chess_rapid?.last?.rating || 0;
+    const bullet = stats.chess_bullet?.last?.rating || 0;
+    return Math.max(blitz, rapid, bullet) || 1450;
+  };
+
+  // Calculate total games from stats
+  const calculateTotalGames = (stats) => {
+    if (!stats) return 342;
+    let total = 0;
+    ['chess_blitz', 'chess_rapid', 'chess_bullet', 'chess_daily'].forEach(cat => {
+      if (stats[cat]?.record) {
+        total += (stats[cat].record.win || 0) + (stats[cat].record.loss || 0) + (stats[cat].record.draw || 0);
+      }
+    });
+    return total || 342;
+  };
+
+  const userRating = calculateBestRating(chesscomStats);
+  const totalGames = calculateTotalGames(chesscomStats);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -950,10 +984,41 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
     }
   };
 
-  const handleChesscomConnect = () => {
-    if (chesscomUsername.trim().length > 2) {
+  const handleChesscomConnect = async () => {
+    const username = chesscomUsername.trim().toLowerCase();
+    if (username.length < 3) {
+      setChesscomError('Username must be at least 3 characters');
+      return;
+    }
+
+    setChesscomLoading(true);
+    setChesscomError('');
+
+    try {
+      // Fetch profile data
+      const profileRes = await fetch(`https://api.chess.com/pub/player/${username}`);
+      if (!profileRes.ok) {
+        throw new Error('User not found on Chess.com');
+      }
+      const profileData = await profileRes.json();
+
+      // Fetch stats data
+      const statsRes = await fetch(`https://api.chess.com/pub/player/${username}/stats`);
+      let statsData = null;
+      if (statsRes.ok) {
+        statsData = await statsRes.json();
+      }
+
+      setChesscomProfile(profileData);
+      setChesscomStats(statsData);
       setChesscomConnected(true);
       setShowChesscomModal(false);
+      console.log('[Chess.com API] Connected:', profileData.username);
+    } catch (err) {
+      console.error('[Chess.com API Error]', err);
+      setChesscomError(err.message || 'Failed to connect');
+    } finally {
+      setChesscomLoading(false);
     }
   };
 
@@ -980,15 +1045,22 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
           <div className="wkp-profile-card">
             {/* Left: Avatar & Info */}
             <div className="wkp-profile-info">
-              <div className="wkp-avatar">
-                WK
-                <div className="wkp-status-dot"></div>
-              </div>
+              {displayAvatar ? (
+                <img src={displayAvatar} alt="avatar" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--wkp-accent)' }} />
+              ) : (
+                <div className="wkp-avatar">
+                  WK
+                  <div className="wkp-status-dot"></div>
+                </div>
+              )}
               <div className="wkp-profile-text-group">
-                <h3>Hero User</h3>
+                <h3>
+                  {displayTitle && <span style={{ color: '#D4AF37', marginRight: '4px' }}>{displayTitle}</span>}
+                  {displayName}
+                </h3>
                 <div className="wkp-profile-meta">
                   <span className="wkp-elo">ELO {userRating}</span>
-                  <span className="wkp-badge">Pro</span>
+                  {chesscomConnected && <span className="wkp-badge">Chess.com</span>}
                 </div>
               </div>
             </div>
@@ -1025,7 +1097,7 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
             </div>
             <div className="wkp-stat-box">
               <span className="wkp-stat-label">Games</span>
-              <span className="wkp-stat-value">342</span>
+              <span className="wkp-stat-value">{totalGames}</span>
               <span className="wkp-stat-sub">Total</span>
             </div>
           </div>
@@ -1152,11 +1224,26 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
                   className="wkp-text-input"
                   placeholder="e.g. Hikaru"
                   value={chesscomUsername}
-                  onChange={(e) => setChesscomUsername(e.target.value)}
+                  onChange={(e) => { setChesscomUsername(e.target.value); setChesscomError(''); }}
+                  disabled={chesscomLoading}
                 />
+                {chesscomError && (
+                  <p style={{ color: '#F87171', fontSize: '11px', marginTop: '6px' }}>{chesscomError}</p>
+                )}
               </div>
-              <button className="wkp-btn-primary" onClick={handleChesscomConnect}>
-                Verify & Connect
+              <button
+                className="wkp-btn-primary"
+                onClick={handleChesscomConnect}
+                disabled={chesscomLoading}
+                style={{ opacity: chesscomLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                {chesscomLoading ? (
+                  <>
+                    <Loader2 className="wkp-spin" size={14} /> Verifying...
+                  </>
+                ) : (
+                  'Verify & Connect'
+                )}
               </button>
             </div>
           </div>
