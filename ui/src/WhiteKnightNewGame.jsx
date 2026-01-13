@@ -675,7 +675,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         {/* 4. COLOR SELECTION */}
                         <div>
                             <label style={{ ...styles.label, marginBottom: '16px' }}>
-                                <Dna size={14} style={{ color: THEME.accent }} /> Play As (Selected: {selectedColor})
+                                <Dna size={14} style={{ color: THEME.accent }} /> Play As (Selected: {selectedColor === 'w' ? 'White' : selectedColor === 'b' ? 'Black' : 'Random'})
                             </label>
                             <div style={{ display: 'flex', backgroundColor: '#0B0E14', padding: '4px', borderRadius: '12px', border: `1px solid ${THEME.panelBorder}` }}>
                                 <button
