@@ -1,4 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+
+// v2.3 Update Log
+console.log("WK Profile Panel v2.3 Loaded - Integrated Buttons");
+
 import {
   Trophy, Calendar, MessageSquare, TrendingUp,
   Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
@@ -115,33 +119,36 @@ const cssStyles = `
   .wkp-profile-actions {
     display: flex !important;
     flex-direction: column !important;
-    gap: 6px !important;
+    gap: 4px !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
   }
 
   /* Mini Buttons */
   .wkp-btn-mini {
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    padding: 6px 10px !important;
-    border-radius: 6px !important;
-    font-size: 10px !important;
+    gap: 6px !important;
+    padding: 5px 8px !important;
+    border-radius: 4px !important;
+    font-size: 9px !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
     cursor: pointer !important;
     border: 1px solid transparent !important;
     transition: all 0.2s !important;
-    min-width: 110px !important;
+    min-width: 90px !important;
     justify-content: flex-start !important;
     line-height: normal !important;
     background: none !important;
+    white-space: nowrap !important;
   }
 
   /* Chess.com Style */
   .wkp-btn-mini.chesscom {
-    background-color: rgba(129, 182, 76, 0.1) !important;
+    background-color: black !important;
     color: #81b64c !important;
-    border-color: rgba(129, 182, 76, 0.2) !important;
+    border-color: #81b64c !important;
   }
   .wkp-btn-mini.chesscom:hover {
     background-color: rgba(129, 182, 76, 0.2) !important;
