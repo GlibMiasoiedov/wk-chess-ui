@@ -442,7 +442,9 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                                 style={styles.summaryCard('side')}
                             >
                                 <span style={{ color: hoveredInteractive['side'] ? THEME.accent : '#64748B', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px', transition: 'color 0.2s' }}>Side</span>
-                                <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '14px', textTransform: 'capitalize' }}>{selectedColor}</span>
+                                <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '14px', textTransform: 'capitalize' }}>
+                                    {selectedColor === 'w' ? 'White' : selectedColor === 'b' ? 'Black' : 'Random'}
+                                </span>
                             </div>
 
                             {/* Difficulty */}
