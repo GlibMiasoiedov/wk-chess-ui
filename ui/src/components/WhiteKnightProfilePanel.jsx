@@ -2,50 +2,48 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Trophy, Calendar, MessageSquare, TrendingUp,
   Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
-  Loader2, Video
+  Loader2, Video, Link2, Globe, ExternalLink, Unlink
 } from 'lucide-react';
 
 /* [INTEGRATION GUIDE FOR DEVELOPERS]
    =================================================================================
    This component serves as the "Command Center" for the user. It aggregates 
-   profile stats, gamification, schedule, and AI assistance.
+   profile stats, gamification, schedule, AI assistance, AND EXTERNAL ACCOUNTS.
 
-   1. UPCOMING LIVE LESSONS (Calendar Integration)
+   1. EXTERNAL ACCOUNTS INTEGRATION (Chess.com & Lichess)
       ------------------------------------------------------------------------------
+      A) CHESS.COM (Public API - No OAuth)
+         - **Endpoint:** `https://api.chess.com/pub/player/{username}/stats`
+         - **Logic:**
+           1. User enters username.
+           2. Fetch public stats to verify existence.
+           3. Save username to your DB linked to this user.
+           4. **Note:** You cannot verify email ownership via API. This is a "soft link".
+         - **Caching:** Cache responses for at least 1-2 hours (headers contain ETag).
+
+      B) LICHESS (OAuth 2.0 - Recommended)
+         - **Docs:** https://lichess.org/api#tag/OAuth
+         - **Flow:**
+           1. Redirect user to Lichess Authorization URL.
+           2. Handle callback code in your backend.
+           3. Exchange code for Access Token.
+           4. Fetch user profile `https://lichess.org/api/account`.
+           5. Save token/profile to your DB.
+         - **Visuals:** The UI below simulates the "Connected" state showing Ratings.
+
+   2. UPCOMING LIVE LESSONS (Calendar Integration)
       - **API Endpoint:** `https://whiteknight.academy/wp-json/tribe/events/v1/events`
       - **Method:** GET
-      - **Logic:**
-        a) Determine user's category based on ELO rating (see `useEffect` below).
-           - < 1200: 'beginner-plan'
-           - 1200-1800: 'middle-plan'
-           - > 1800: 'elite-plan'
-           - No rating / Guest: 'trial-class'
-        b) Fetch events filtering by this category slug.
-           - Example: `fetch('.../events?categories=middle-plan')`
-        c) Filter for future events only (`start_date > now`).
-        d) Sort by date ASC and display the nearest one (`events[0]`).
-      - **Booking:** The "Book Lesson" button should open the specific event URL 
-        (provided in the API response as `url`) or the general calendar page.
+      - **Logic:** Filter by user category slug. Show nearest future event.
 
-   2. USER PROFILE & STATS
-      - **Source:** Your User Database / Auth Context.
-      - **Fields:** Avatar, Display Name, Membership Level (Pro/Free), ELO Rating, Total Games.
-      - **Visuals:** Status dot (green) indicates 'Online'.
+   3. USER PROFILE & STATS
+      - **Source:** Your User Database.
 
-   3. GAMIFICATION (Awards)
-      - **Source:** Gamification Service API.
-      - **Display:** Show the 2 most recent or most significant unlocked achievements.
-
-   4. AI ASSISTANT (Chat Widget)
-      - **UI:** Expandable drawer (bottom-sheet style).
-      - **Integration:** Connect `handleSendMessage` to your AI Backend (e.g., OpenAI API).
-      - **Context:** Pass the user's last game PGN to the AI context so it can answer 
-        questions like "Why did I lose?" immediately.
+   4. AI ASSISTANT
+      - **UI:** Expandable drawer.
 
    5. STYLING
-      - Styles are scoped via CSS classes starting with `.wk-` to prevent conflicts 
-        with WordPress themes.
-      - The panel is fully responsive (fixed width on desktop, flexible on mobile if needed).
+      - Scoped CSS (.wk-) to prevent WordPress theme conflicts.
    =================================================================================
 */
 
@@ -63,35 +61,34 @@ const cssStyles = `
     --wk-shadow-glow: 0 0 15px rgba(212, 175, 55, 0.1);
   }
 
+  /* SAFETY ANIMATION for Loader2 */
   @keyframes wk-spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
+  .animate-spin { animation: wk-spin 1s linear infinite; }
 
   .wk-wrapper, .wk-wrapper * { box-sizing: border-box; }
   
   .wk-wrapper {
-    height: 100%; /* ADAPTED: Was 100vh */
-    width: 100%;
+    height: 100vh;
     background-color: var(--wk-bg);
     display: flex;
-    flex-direction: column; /* ADAPTED: Column layout for sidebar */
-    /* justify-content: center; REMOVED for sidebar fit */
-    /* align-items: center; REMOVED for sidebar fit */
-    /* padding: 20px; REMOVED padding to fit container */
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
     font-family: sans-serif;
-    overflow: hidden;
   }
 
   .wk-panel {
-    width: 100%; /* ADAPTED: Was 500px */
-    height: 100%; /* ADAPTED: Was 95vh */
+    width: 500px;
+    height: 95vh;
     background-color: var(--wk-panel);
-    /* border: 1px solid var(--wk-border); REMOVED border to blend */
-    /* border-radius: 16px; REMOVED radius to blend */
+    border: 1px solid var(--wk-border);
+    border-radius: 16px;
     display: flex;
     flex-direction: column;
-    /* box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); REMOVED shadow */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
     overflow: hidden;
     position: relative;
   }
@@ -165,7 +162,7 @@ const cssStyles = `
 
   .wk-label-mini {
     color: var(--wk-text-muted);
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -191,6 +188,120 @@ const cssStyles = `
     padding: 2px 6px;
     border-radius: 4px;
   }
+
+  /* --- CONNECT ACCOUNTS (Top Bar) --- */
+  .wk-connect-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+    width: 100%;
+  }
+
+  .wk-btn-connect {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Increased gap for better spacing */
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800; /* Bolder text */
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    line-height: 1;
+    text-align: center;
+  }
+
+  /* Chess.com Style */
+  .wk-btn-chesscom {
+    background-color: rgba(129, 182, 76, 0.1);
+    color: #81b64c;
+    border-color: rgba(129, 182, 76, 0.2);
+  }
+  .wk-btn-chesscom:hover {
+    background-color: rgba(129, 182, 76, 0.2);
+    border-color: #81b64c;
+  }
+  .wk-btn-chesscom.connected {
+    background-color: #81b64c;
+    color: #fff;
+    border-color: #81b64c;
+  }
+  .wk-btn-chesscom.connected:hover {
+    background-color: #6a963e; /* Darker green on hover for disconnect hint */
+  }
+
+  /* Lichess Style */
+  .wk-btn-lichess {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .wk-btn-lichess:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #fff;
+  }
+  .wk-btn-lichess.connected {
+    background-color: #fff;
+    color: #000;
+    border-color: #fff;
+  }
+  .wk-btn-lichess.connected:hover {
+    background-color: #e0e0e0;
+  }
+
+  /* MODAL FOR CHESS.COM */
+  .wk-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0,0,0,0.8);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  .wk-modal {
+    background-color: var(--wk-panel);
+    border: 1px solid var(--wk-border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    position: relative;
+    animation: slideUp 0.2s ease-out;
+  }
+
+  .wk-modal-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+  }
+  .wk-modal-title { color: white; font-weight: bold; font-size: 16px; }
+  
+  .wk-input-group { margin-bottom: 16px; }
+  .wk-input-label { display: block; color: var(--wk-text-muted); font-size: 11px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase; }
+  .wk-text-input {
+    width: 100%; background: #0B0E14; border: 1px solid var(--wk-border);
+    border-radius: 8px; padding: 10px; color: white; font-size: 14px;
+  }
+  .wk-text-input:focus { outline: none; border-color: var(--wk-accent); }
+
+  .wk-btn-primary {
+    width: 100%; padding: 10px; background: var(--wk-accent); color: black;
+    border: none; border-radius: 8px; font-weight: bold; font-size: 12px;
+    cursor: pointer; text-transform: uppercase;
+  }
+  .wk-btn-primary:hover { background: var(--wk-accent-hover); }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
 
   /* 3. Awards */
   .wk-awards-row {
@@ -218,7 +329,7 @@ const cssStyles = `
     border-radius: 8px;
     background-color: rgba(212, 175, 55, 0.1);
     color: var(--wk-accent);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   /* 4. Schedule Card */
@@ -274,12 +385,7 @@ const cssStyles = `
     border-bottom: 1px solid var(--wk-border);
     padding-bottom: 12px;
     position: relative; z-index: 10;
-    overflow-x: auto; /* Fix for overflow tabs */
-    white-space: nowrap;
-    scrollbar-width: none;
   }
-  .wk-cat-tabs::-webkit-scrollbar { display: none; }
-
   .wk-cat-tab {
     background: transparent;
     border: 1px solid transparent;
@@ -331,7 +437,6 @@ const cssStyles = `
     gap: 10px;
     color: var(--wk-text-muted);
     font-size: 12px;
-    flex-wrap: wrap; 
   }
 
   .wk-btn-book {
@@ -384,7 +489,6 @@ const cssStyles = `
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 100;
     display: flex; flex-direction: column;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
   }
   .wk-chat-drawer.open { transform: translateY(0); }
   
@@ -466,6 +570,12 @@ export default function WhiteKnightProfilePanel() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // External Accounts State
+  const [lichessConnected, setLichessConnected] = useState(false);
+  const [chesscomConnected, setChesscomConnected] = useState(false);
+  const [chesscomUsername, setChesscomUsername] = useState("");
+  const [showChesscomModal, setShowChesscomModal] = useState(false);
+
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState([
@@ -486,7 +596,6 @@ export default function WhiteKnightProfilePanel() {
   // 2. Fetch Events (Simulation)
   useEffect(() => {
     setLoading(true);
-    // [DEV NOTE] Use the real API here: https://whiteknight.academy/wp-json/tribe/events/v1/events
     setTimeout(() => {
       const filtered = MOCK_EVENTS.filter(e => e.category === activeCategory);
       setEvents(filtered);
@@ -507,15 +616,36 @@ export default function WhiteKnightProfilePanel() {
     if (isChatOpen) msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isChatOpen]);
 
-  const nextEvent = events[0];
+  const handleChesscomClick = () => {
+    if (chesscomConnected) {
+      if (window.confirm("Are you sure you want to disconnect Chess.com?")) {
+        setChesscomConnected(false);
+        setChesscomUsername("");
+      }
+    } else {
+      setShowChesscomModal(true);
+    }
+  };
 
-  // --- DIAGNOSTICS ---
-  useEffect(() => {
-    console.log('[WK-Profile] Icons Check:', {
-      Trophy, Calendar, MessageSquare, TrendingUp, Award,
-      CheckCircle2, Zap, User, Star, X, Send, ChevronRight, Loader2, Video
-    });
-  }, []);
+  const handleChesscomConnect = () => {
+    if (chesscomUsername.trim().length > 2) {
+      setChesscomConnected(true);
+      setShowChesscomModal(false);
+    }
+  };
+
+  const handleLichessClick = () => {
+    if (lichessConnected) {
+      if (window.confirm("Are you sure you want to disconnect Lichess?")) {
+        setLichessConnected(false);
+      }
+    } else {
+      // Simulate OAuth
+      setLichessConnected(true);
+    }
+  };
+
+  const nextEvent = events[0];
 
   return (
     <>
@@ -525,6 +655,23 @@ export default function WhiteKnightProfilePanel() {
         <div className="wk-panel">
 
           <div className="wk-scroll-content">
+
+            {/* --- NEW: CONNECT BAR (CENTERED CONTENT) --- */}
+            <div className="wk-connect-bar">
+              <button
+                className={`wk-btn-connect wk-btn-chesscom ${chesscomConnected ? 'connected' : ''}`}
+                onClick={handleChesscomClick}
+              >
+                <Link2 size={12} /> {chesscomConnected ? chesscomUsername : 'Connect Chess.com'}
+              </button>
+              <button
+                className={`wk-btn-connect wk-btn-lichess ${lichessConnected ? 'connected' : ''}`}
+                onClick={handleLichessClick}
+              >
+                <Link2 size={12} /> {lichessConnected ? 'Lichess Linked' : 'Connect Lichess'}
+              </button>
+            </div>
+
             {/* HEADER */}
             <div className="wk-card-profile">
               <div className="wk-avatar">
@@ -598,7 +745,7 @@ export default function WhiteKnightProfilePanel() {
 
               {loading ? (
                 <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wk-text-muted)' }}>
-                  <Loader2 size={24} style={{ animation: 'wk-spin 1s linear infinite' }} />
+                  <Loader2 className="animate-spin" size={24} />
                 </div>
               ) : nextEvent ? (
                 <div className="wk-event-row">
@@ -647,6 +794,33 @@ export default function WhiteKnightProfilePanel() {
             <div style={{ minHeight: '10px' }}></div>
 
           </div>
+
+          {/* --- MODAL FOR CHESS.COM --- */}
+          {showChesscomModal && (
+            <div className="wk-modal-overlay">
+              <div className="wk-modal">
+                <div className="wk-modal-header">
+                  <span className="wk-modal-title">Link Chess.com</span>
+                  <button onClick={() => setShowChesscomModal(false)} style={{ background: 'none', border: 'none', color: 'var(--wk-text-muted)', cursor: 'pointer' }}>
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="wk-input-group">
+                  <label className="wk-input-label">Username or Profile URL</label>
+                  <input
+                    type="text"
+                    className="wk-text-input"
+                    placeholder="e.g. Hikaru"
+                    value={chesscomUsername}
+                    onChange={(e) => setChesscomUsername(e.target.value)}
+                  />
+                </div>
+                <button className="wk-btn-primary" onClick={handleChesscomConnect}>
+                  Verify & Connect
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* --- DRAWER --- */}
           <div className={`wk-chat-drawer ${isChatOpen ? 'open' : ''}`}>
