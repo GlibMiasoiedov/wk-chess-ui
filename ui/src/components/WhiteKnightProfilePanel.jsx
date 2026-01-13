@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Trophy, Calendar, MessageSquare, TrendingUp,
   Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
-  Loader2, Video, Link2
+  Loader2, Video, Link2, Unlink
 } from 'lucide-react';
 
 /* [INTEGRATION GUIDE FOR DEVELOPERS]
@@ -10,10 +10,10 @@ import {
    This component serves as the "Command Center" for the user. It aggregates 
    profile stats, gamification, schedule, AI assistance, AND EXTERNAL ACCOUNTS.
    
-   FIXED FOR WORDPRESS EMBEDDING - v2.0
+   FIXED FOR WORDPRESS EMBEDDING - v2.2
+   - Integrated Connect Buttons into Profile Card to save vertical space.
    - Strong CSS isolation with !important where needed
    - All styles scoped with .wkp- prefix
-   - Flexbox/Grid with explicit properties
    =================================================================================
 */
 
@@ -94,104 +94,110 @@ const cssStyles = `
     border-radius: 3px;
   }
 
-  /* Connect Buttons Row */
-  .wkp-connect-row {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
-    width: 100% !important;
-  }
-
-  .wkp-btn-connect {
-    flex: 1 1 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    padding: 10px 8px !important;
-    border-radius: 6px !important;
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.03em !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    border: 1px solid transparent !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    background: none !important;
-  }
-
-  .wkp-btn-chesscom {
-    background-color: rgba(129, 182, 76, 0.1) !important;
-    color: #81b64c !important;
-    border-color: rgba(129, 182, 76, 0.2) !important;
-  }
-  .wkp-btn-chesscom:hover {
-    background-color: rgba(129, 182, 76, 0.2) !important;
-    border-color: #81b64c !important;
-  }
-  .wkp-btn-chesscom.connected {
-    background-color: #81b64c !important;
-    color: #fff !important;
-  }
-
-  .wkp-btn-lichess {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    color: #e0e0e0 !important;
-    border-color: rgba(255, 255, 255, 0.15) !important;
-  }
-  .wkp-btn-lichess:hover {
-    background-color: rgba(255, 255, 255, 0.15) !important;
-    border-color: #fff !important;
-  }
-  .wkp-btn-lichess.connected {
-    background-color: #fff !important;
-    color: #000 !important;
-  }
-
-  /* Profile Card */
+  /* Profile Card (Updated Layout) */
   .wkp-profile-card {
     display: flex !important;
+    justify-content: space-between !important;
     align-items: center !important;
-    gap: 12px !important;
-    padding: 14px !important;
-    border-radius: 10px !important;
+    gap: 16px !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
     background: linear-gradient(145deg, #1A1E26 0%, #111 100%) !important;
     border: 1px solid var(--wkp-border) !important;
   }
 
+  .wkp-profile-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  .wkp-profile-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  /* Mini Buttons */
+  .wkp-btn-mini {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    border: 1px solid transparent !important;
+    transition: all 0.2s !important;
+    min-width: 110px !important;
+    justify-content: flex-start !important;
+    line-height: normal !important;
+    background: none !important;
+  }
+
+  /* Chess.com Style */
+  .wkp-btn-mini.chesscom {
+    background-color: rgba(129, 182, 76, 0.1) !important;
+    color: #81b64c !important;
+    border-color: rgba(129, 182, 76, 0.2) !important;
+  }
+  .wkp-btn-mini.chesscom:hover {
+    background-color: rgba(129, 182, 76, 0.2) !important;
+    border-color: #81b64c !important;
+  }
+  .wkp-btn-mini.chesscom.connected {
+    background-color: #81b64c !important;
+    color: #fff !important;
+  }
+
+  /* Lichess Style */
+  .wkp-btn-mini.lichess {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #e0e0e0 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+  .wkp-btn-mini.lichess:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: #fff !important;
+  }
+  .wkp-btn-mini.lichess.connected {
+    background-color: #fff !important;
+    color: #000 !important;
+  }
+
   .wkp-avatar {
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
     border-radius: 50% !important;
     background: linear-gradient(135deg, var(--wkp-accent) 0%, #B39352 100%) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     font-weight: 700 !important;
-    font-size: 16px !important;
+    font-size: 20px !important;
     color: #000 !important;
     position: relative !important;
+    flex-shrink: 0 !important;
   }
 
   .wkp-status-dot {
     position: absolute !important;
-    bottom: 0 !important;
-    right: 0 !important;
-    width: 12px !important;
-    height: 12px !important;
+    bottom: 2px !important;
+    right: 2px !important;
+    width: 14px !important;
+    height: 14px !important;
     background-color: var(--wkp-success) !important;
     border: 2px solid #1A1E26 !important;
     border-radius: 50% !important;
   }
 
-  .wkp-profile-info h3 {
+  .wkp-profile-text-group h3 {
     color: white !important;
     font-weight: 700 !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
     margin: 0 0 4px 0 !important;
     line-height: 1.2 !important;
   }
@@ -203,7 +209,7 @@ const cssStyles = `
   }
 
   .wkp-elo {
-    font-size: 10px !important;
+    font-size: 11px !important;
     color: var(--wkp-text-muted) !important;
   }
 
@@ -843,8 +849,10 @@ const cssStyles = `
       width: 42px !important;
       height: 42px !important;
       min-width: 42px !important;
+      font-size: 16px !important;
     }
-    .wkp-profile-info h3 { font-size: 14px !important; }
+    .wkp-profile-text-group h3 { font-size: 14px !important; }
+    .wkp-btn-mini { padding: 4px 8px !important; font-size: 9px !important; min-width: 100px !important; }
     .wkp-stats-grid { gap: 8px !important; }
     .wkp-stat-box { 
       min-height: 60px !important; 
@@ -961,36 +969,41 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
       <div className="wkp-root">
         <div className="wkp-scroll">
 
-          {/* Connect Buttons */}
-          <div className="wkp-connect-row">
-            <button
-              className={`wkp-btn-connect wkp-btn-chesscom ${chesscomConnected ? 'connected' : ''}`}
-              onClick={handleChesscomClick}
-            >
-              <Link2 size={12} />
-              {chesscomConnected ? chesscomUsername : 'Chess.com'}
-            </button>
-            <button
-              className={`wkp-btn-connect wkp-btn-lichess ${lichessConnected ? 'connected' : ''}`}
-              onClick={handleLichessClick}
-            >
-              <Link2 size={12} />
-              {lichessConnected ? 'Lichess ✓' : 'Lichess'}
-            </button>
-          </div>
-
-          {/* Profile Card */}
+          {/* Profile Card WITH INTEGRATED BUTTONS */}
           <div className="wkp-profile-card">
-            <div className="wkp-avatar">
-              WK
-              <div className="wkp-status-dot"></div>
-            </div>
+            {/* Left: Avatar & Info */}
             <div className="wkp-profile-info">
-              <h3>Hero User</h3>
-              <div className="wkp-profile-meta">
-                <span className="wkp-elo">ELO {userRating}</span>
-                <span className="wkp-badge">Pro</span>
+              <div className="wkp-avatar">
+                WK
+                <div className="wkp-status-dot"></div>
               </div>
+              <div className="wkp-profile-text-group">
+                <h3>Hero User</h3>
+                <div className="wkp-profile-meta">
+                  <span className="wkp-elo">ELO {userRating}</span>
+                  <span className="wkp-badge">Pro</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Connect Buttons Column */}
+            <div className="wkp-profile-actions">
+              <button
+                className={`wkp-btn-mini chesscom ${chesscomConnected ? 'connected' : ''}`}
+                onClick={handleChesscomClick}
+                title={chesscomConnected ? "Disconnect Chess.com" : "Connect Chess.com"}
+              >
+                {chesscomConnected ? <Unlink size={12} /> : <Link2 size={12} />}
+                {chesscomConnected ? chesscomUsername : 'Chess.com'}
+              </button>
+              <button
+                className={`wkp-btn-mini lichess ${lichessConnected ? 'connected' : ''}`}
+                onClick={handleLichessClick}
+                title={lichessConnected ? "Disconnect Lichess" : "Connect Lichess"}
+              >
+                {lichessConnected ? <Unlink size={12} /> : <Link2 size={12} />}
+                {lichessConnected ? 'Lichess ✓' : 'Lichess'}
+              </button>
             </div>
           </div>
 
