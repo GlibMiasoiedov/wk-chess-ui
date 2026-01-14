@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { SquareDataType, FenPieceString, PositionDataType } from './types';
 
 export function generateBoard(

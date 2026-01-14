@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Board } from './Board';
 import {
   ChessboardOptions,

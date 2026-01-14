@@ -45,6 +45,49 @@ export default function App() {
     setGameData(data);
     setScreen('analysis');
     console.log('[App] Screen set to analysis');
+
+    // Save game stats to localStorage for session persistence (non-logged users)
+    try {
+      const existingStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 1200}');
+
+      // Determine result
+      const result = data.result;
+      let outcome = 'draw'; // default
+      if (result?.winner) {
+        outcome = result.winner === data.playerColor ? 'win' : 'loss';
+      } else if (result?.reason === 'checkmate') {
+        // If it's checkmate, the person who just moved won
+        const lastMoverColor = data.moves?.length % 2 === 0 ? 'b' : 'w'; // odd moves = white last
+        outcome = lastMoverColor === data.playerColor ? 'win' : 'loss';
+      } else if (result?.reason === 'resignation') {
+        outcome = result.loser === data.playerColor ? 'loss' : 'win';
+      } else if (result?.reason === 'timeout') {
+        outcome = result.loser === data.playerColor ? 'loss' : 'win';
+      }
+
+      // Update stats
+      existingStats.games += 1;
+      if (outcome === 'win') existingStats.wins += 1;
+      if (outcome === 'loss') existingStats.losses += 1;
+      if (outcome === 'draw') existingStats.draws += 1;
+
+      // Simple rating calculation (provisional)
+      const botRating = gameSettings?.bot?.rating || 1200;
+      if (outcome === 'win') {
+        existingStats.rating = Math.round((existingStats.rating * (existingStats.games - 1) + botRating + 100) / existingStats.games);
+      } else if (outcome === 'loss') {
+        existingStats.rating = Math.round((existingStats.rating * (existingStats.games - 1) + botRating - 100) / existingStats.games);
+      } else {
+        existingStats.rating = Math.round((existingStats.rating * (existingStats.games - 1) + botRating) / existingStats.games);
+      }
+      // Clamp rating between 400 and 3000
+      existingStats.rating = Math.max(400, Math.min(3000, existingStats.rating));
+
+      localStorage.setItem('wk_session_stats', JSON.stringify(existingStats));
+      console.log('[App] Session stats saved to localStorage:', existingStats);
+    } catch (e) {
+      console.error('[App] Error saving session stats:', e);
+    }
   };
 
   const handleNewGame = () => {

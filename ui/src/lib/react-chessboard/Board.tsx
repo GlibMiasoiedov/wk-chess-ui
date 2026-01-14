@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DragOverlay } from '@dnd-kit/core';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 

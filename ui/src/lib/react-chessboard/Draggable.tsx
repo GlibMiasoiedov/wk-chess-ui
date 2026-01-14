@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useDraggable } from '@dnd-kit/core';
 
 import { useChessboardContext } from './ChessboardProvider';

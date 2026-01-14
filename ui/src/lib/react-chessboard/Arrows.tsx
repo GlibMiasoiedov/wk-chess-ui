@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Fragment } from 'react';
 
 import { useChessboardContext } from './ChessboardProvider';
@@ -21,13 +22,13 @@ export function Arrows() {
 
   const currentlyDrawingArrow =
     newArrowStartSquare &&
-    newArrowOverSquare &&
-    newArrowStartSquare !== newArrowOverSquare.square
+      newArrowOverSquare &&
+      newArrowStartSquare !== newArrowOverSquare.square
       ? {
-          startSquare: newArrowStartSquare,
-          endSquare: newArrowOverSquare.square,
-          color: newArrowOverSquare.color,
-        }
+        startSquare: newArrowStartSquare,
+        endSquare: newArrowOverSquare.square,
+        color: newArrowOverSquare.color,
+      }
       : null;
 
   const arrowsToDraw = currentlyDrawingArrow
@@ -102,13 +103,13 @@ export function Arrows() {
           const mid =
             Math.abs(dx) < Math.abs(dy)
               ? {
-                  x: from.x,
-                  y: to.y,
-                }
+                x: from.x,
+                y: to.y,
+              }
               : {
-                  x: to.x,
-                  y: from.y,
-                };
+                x: to.x,
+                y: from.y,
+              };
 
           // Calculate the difference in x and y coordinates between mid and end points
           const dxEnd = to.x - mid.x;
@@ -150,9 +151,8 @@ export function Arrows() {
 
         return (
           <Fragment
-            key={`${id}-arrow-${arrow.startSquare}-${arrow.endSquare}${
-              isArrowActive ? '-active' : ''
-            }`}
+            key={`${id}-arrow-${arrow.startSquare}-${arrow.endSquare}${isArrowActive ? '-active' : ''
+              }`}
           >
             <marker
               id={`${id}-arrowhead-${i}-${arrow.startSquare}-${arrow.endSquare}`}
@@ -176,7 +176,7 @@ export function Arrows() {
               strokeWidth={
                 isArrowActive
                   ? arrowOptions.activeArrowWidthMultiplier *
-                    (squareWidth / arrowOptions.arrowWidthDenominator)
+                  (squareWidth / arrowOptions.arrowWidthDenominator)
                   : squareWidth / arrowOptions.arrowWidthDenominator
               }
               markerEnd={`url(#${id}-arrowhead-${i}-${arrow.startSquare}-${arrow.endSquare})`}

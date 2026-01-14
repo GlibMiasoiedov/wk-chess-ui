@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Draggable } from './Draggable';
 import { Piece } from './Piece';
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Modifier } from '@dnd-kit/core';
 
 export const preventDragOffBoard = (

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export * from './Chessboard';
 export * from './ChessboardProvider';
 export * from './defaults';

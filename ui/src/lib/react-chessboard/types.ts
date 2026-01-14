@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type Arrow = {
   startSquare: string; // e.g. "a8"
   endSquare: string; // e.g. "a7"

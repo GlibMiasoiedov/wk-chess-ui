@@ -908,6 +908,22 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
   // Exit Warning State
   const [showExitWarning, setShowExitWarning] = useState(false);
 
+  // Session Stats from localStorage (for non-logged users)
+  const [sessionStats, setSessionStats] = useState({ games: 0, rating: 1200, wins: 0, losses: 0, draws: 0 });
+
+  // Load session stats from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedStats = localStorage.getItem('wk_session_stats');
+      if (savedStats) {
+        setSessionStats(JSON.parse(savedStats));
+        console.log('[ProfilePanel] Loaded session stats:', savedStats);
+      }
+    } catch (e) {
+      console.error('[ProfilePanel] Error loading session stats:', e);
+    }
+  }, []);
+
   // Derived display values
   const displayName = chesscomProfile?.name || chesscomProfile?.username || 'Hero User';
   const displayAvatar = chesscomProfile?.avatar || null;
@@ -937,10 +953,11 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
   const userRating = calculateBestRating(chesscomStats);
   const totalGames = calculateTotalGames(chesscomStats);
   const isConnected = chesscomConnected || lichessConnected;
+  const hasSessionGames = sessionStats.games > 0;
 
-  // Display values: show placeholders if not connected
-  const displayRating = isConnected ? userRating : '---';
-  const displayGames = isConnected ? totalGames : '---';
+  // Display values: show session stats if games played, otherwise Chess.com stats if connected, else placeholders
+  const displayRating = isConnected ? userRating : (hasSessionGames ? sessionStats.rating : '---');
+  const displayGames = isConnected ? totalGames : (hasSessionGames ? sessionStats.games : '---');
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");

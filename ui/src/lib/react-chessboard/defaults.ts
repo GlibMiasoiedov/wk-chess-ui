@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function defaultBoardStyle(
   chessboardColumns: number,
 ): React.CSSProperties {

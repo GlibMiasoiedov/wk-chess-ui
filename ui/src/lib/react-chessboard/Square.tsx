@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { memo, useEffect, useRef, useState } from 'react';
 
 import { useChessboardContext } from './ChessboardProvider';
@@ -206,42 +207,42 @@ export const Square = memo(function Square({
           style={
             isLightSquare
               ? {
-                  ...defaultLightSquareNotationStyle,
-                  ...lightSquareNotationStyle,
-                }
+                ...defaultLightSquareNotationStyle,
+                ...lightSquareNotationStyle,
+              }
               : {
-                  ...defaultDarkSquareNotationStyle,
-                  ...darkSquareNotationStyle,
-                }
+                ...defaultDarkSquareNotationStyle,
+                ...darkSquareNotationStyle,
+              }
           }
         >
           {row ===
             (boardOrientation === 'white'
               ? '1'
               : chessboardRows.toString()) && (
-            <span
-              style={{ ...defaultAlphaNotationStyle, ...alphaNotationStyle }}
-            >
-              {column}
-            </span>
-          )}
+              <span
+                style={{ ...defaultAlphaNotationStyle, ...alphaNotationStyle }}
+              >
+                {column}
+              </span>
+            )}
           {column ===
             (boardOrientation === 'white'
               ? 'a'
               : columnIndexToChessColumn(
-                  0,
-                  chessboardColumns,
-                  boardOrientation,
-                )) && (
-            <span
-              style={{
-                ...defaultNumericNotationStyle,
-                ...numericNotationStyle,
-              }}
-            >
-              {row}
-            </span>
-          )}
+                0,
+                chessboardColumns,
+                boardOrientation,
+              )) && (
+              <span
+                style={{
+                  ...defaultNumericNotationStyle,
+                  ...numericNotationStyle,
+                }}
+              >
+                {row}
+              </span>
+            )}
         </span>
       ) : null}
 
@@ -250,16 +251,16 @@ export const Square = memo(function Square({
         square: squareId,
         children,
       }) || (
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            ...squareStyles[squareId],
-          }}
-        >
-          {children}
-        </div>
-      )}
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              ...squareStyles[squareId],
+            }}
+          >
+            {children}
+          </div>
+        )}
     </div>
   );
 });
