@@ -294,6 +294,56 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
             setAnalysisStats(stats);
             setEstimatedRating(rating);
 
+            // Update session stats with performance-based rating
+            try {
+                const sessionStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 1200, "lastRatingChange": 0}');
+
+                const myRating = sessionStats.rating;
+                const botRating = sessionStats.pendingBotRating || 1200;
+                const outcome = sessionStats.pendingOutcome || 'draw';
+                const totalGames = sessionStats.games;
+
+                // K-Factor: 40 for new players (<30 games), 20 for established
+                const K = totalGames < 30 ? 40 : 20;
+
+                // Actual score: 1 for win, 0.5 for draw, 0 for loss
+                const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
+
+                // Expected score based on rating difference (Elo formula)
+                const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
+
+                // Base rating change from Elo
+                let ratingChange = K * (actualScore - expectedScore);
+
+                // Performance modifier: adjust based on move quality
+                // If performance rating is much higher than current rating, bonus
+                // If performance rating is much lower than current rating, penalty
+                const performanceRatio = rating / Math.max(myRating, 400);
+                if (performanceRatio > 1.15) {
+                    ratingChange *= 1.3; // +30% bonus for excellent play
+                } else if (performanceRatio > 1.05) {
+                    ratingChange *= 1.15; // +15% bonus for good play
+                } else if (performanceRatio < 0.85) {
+                    ratingChange *= 0.7; // -30% for poor play
+                } else if (performanceRatio < 0.95) {
+                    ratingChange *= 0.85; // -15% for below average
+                }
+
+                ratingChange = Math.round(ratingChange);
+                sessionStats.rating = Math.max(400, Math.min(3000, myRating + ratingChange));
+                sessionStats.lastRatingChange = ratingChange;
+                sessionStats.lastPerformanceRating = rating;
+
+                // Clear pending data
+                delete sessionStats.pendingOutcome;
+                delete sessionStats.pendingBotRating;
+
+                localStorage.setItem('wk_session_stats', JSON.stringify(sessionStats));
+                console.log(`[Analysis] Rating updated: ${myRating} → ${sessionStats.rating} (${ratingChange >= 0 ? '+' : ''}${ratingChange}), Performance: ${rating}`);
+            } catch (e) {
+                console.error('[Analysis] Error updating session rating:', e);
+            }
+
             setTimeout(() => setUiState('complete'), 300);
         } catch (err) {
             console.error('Analysis error:', err);

@@ -46,9 +46,9 @@ export default function App() {
     setScreen('analysis');
     console.log('[App] Screen set to analysis');
 
-    // Save game stats to localStorage for session persistence (non-logged users)
+    // Save game outcome to localStorage (rating will be calculated after Stockfish analysis)
     try {
-      const existingStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 1200}');
+      const existingStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 1200, "lastRatingChange": 0}');
 
       // Determine result
       const result = data.result;
@@ -56,8 +56,7 @@ export default function App() {
       if (result?.winner) {
         outcome = result.winner === data.playerColor ? 'win' : 'loss';
       } else if (result?.reason === 'checkmate') {
-        // If it's checkmate, the person who just moved won
-        const lastMoverColor = data.moves?.length % 2 === 0 ? 'b' : 'w'; // odd moves = white last
+        const lastMoverColor = data.moves?.length % 2 === 0 ? 'b' : 'w';
         outcome = lastMoverColor === data.playerColor ? 'win' : 'loss';
       } else if (result?.reason === 'resignation') {
         outcome = result.loser === data.playerColor ? 'loss' : 'win';
@@ -65,40 +64,20 @@ export default function App() {
         outcome = result.loser === data.playerColor ? 'loss' : 'win';
       }
 
-      // Update stats
+      // Update game counts (rating updated after Stockfish analysis in WhiteKnightAnalysis.jsx)
       existingStats.games += 1;
       if (outcome === 'win') existingStats.wins += 1;
       if (outcome === 'loss') existingStats.losses += 1;
       if (outcome === 'draw') existingStats.draws += 1;
 
-      // Proper Elo rating calculation
-      const botRating = gameSettings?.bot?.rating || 1200;
-      const myRating = existingStats.rating;
-      const totalGames = existingStats.games;
-
-      // K-Factor: 40 for new players (<30 games), 20 for established
-      const K = totalGames < 30 ? 40 : 20;
-
-      // Actual score: 1 for win, 0.5 for draw, 0 for loss
-      const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
-
-      // Expected score based on rating difference
-      // Formula: Ea = 1 / (1 + 10^((Rb - Ra) / 400))
-      const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
-
-      // New rating: New = Old + K * (Actual - Expected)
-      const ratingChange = Math.round(K * (actualScore - expectedScore));
-      existingStats.rating = myRating + ratingChange;
-
-      // Clamp rating between 400 and 3000
-      existingStats.rating = Math.max(400, Math.min(3000, existingStats.rating));
-
-      console.log(`[App] Elo calculation: My ${myRating} vs Bot ${botRating}, Score: ${actualScore}, Expected: ${expectedScore.toFixed(3)}, Change: ${ratingChange}, New: ${existingStats.rating}`);
+      // Store outcome for analysis phase to use
+      existingStats.pendingOutcome = outcome;
+      existingStats.pendingBotRating = gameSettings?.bot?.rating || 1200;
 
       localStorage.setItem('wk_session_stats', JSON.stringify(existingStats));
-      console.log('[App] Session stats saved to localStorage:', existingStats);
+      console.log('[App] Game outcome saved, rating will be calculated after analysis:', existingStats);
     } catch (e) {
-      console.error('[App] Error saving session stats:', e);
+      console.error('[App] Error saving game outcome:', e);
     }
   };
 

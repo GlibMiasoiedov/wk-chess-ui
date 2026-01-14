@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 console.log("WK Profile Panel v2.3 Loaded - Integrated Buttons");
 
 import {
-  Trophy, Calendar, MessageSquare, TrendingUp,
+  Trophy, Calendar, MessageSquare, TrendingUp, TrendingDown,
   Award, CheckCircle2, Zap, User, Star, X, Send, ChevronRight,
   Loader2, Video, Link2, Unlink, AlertTriangle
 } from 'lucide-react';
@@ -1147,6 +1147,12 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
             <div className="wkp-stat-box">
               <span className="wkp-stat-label">Rating</span>
               <span className="wkp-stat-value">{displayRating}</span>
+              {sessionStats.lastRatingChange !== 0 && !isConnected && (
+                <span className="wkp-trend" style={{ color: sessionStats.lastRatingChange > 0 ? '#22C55E' : '#EF4444' }}>
+                  {sessionStats.lastRatingChange > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                  {sessionStats.lastRatingChange > 0 ? '+' : ''}{sessionStats.lastRatingChange}
+                </span>
+              )}
               {isConnected && (
                 <span className="wkp-trend">
                   <TrendingUp size={10} /> +12
