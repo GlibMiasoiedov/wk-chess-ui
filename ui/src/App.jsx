@@ -71,17 +71,29 @@ export default function App() {
       if (outcome === 'loss') existingStats.losses += 1;
       if (outcome === 'draw') existingStats.draws += 1;
 
-      // Simple rating calculation (provisional)
+      // Proper Elo rating calculation
       const botRating = gameSettings?.bot?.rating || 1200;
-      if (outcome === 'win') {
-        existingStats.rating = Math.round((existingStats.rating * (existingStats.games - 1) + botRating + 100) / existingStats.games);
-      } else if (outcome === 'loss') {
-        existingStats.rating = Math.round((existingStats.rating * (existingStats.games - 1) + botRating - 100) / existingStats.games);
-      } else {
-        existingStats.rating = Math.round((existingStats.rating * (existingStats.games - 1) + botRating) / existingStats.games);
-      }
+      const myRating = existingStats.rating;
+      const totalGames = existingStats.games;
+
+      // K-Factor: 40 for new players (<30 games), 20 for established
+      const K = totalGames < 30 ? 40 : 20;
+
+      // Actual score: 1 for win, 0.5 for draw, 0 for loss
+      const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
+
+      // Expected score based on rating difference
+      // Formula: Ea = 1 / (1 + 10^((Rb - Ra) / 400))
+      const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
+
+      // New rating: New = Old + K * (Actual - Expected)
+      const ratingChange = Math.round(K * (actualScore - expectedScore));
+      existingStats.rating = myRating + ratingChange;
+
       // Clamp rating between 400 and 3000
       existingStats.rating = Math.max(400, Math.min(3000, existingStats.rating));
+
+      console.log(`[App] Elo calculation: My ${myRating} vs Bot ${botRating}, Score: ${actualScore}, Expected: ${expectedScore.toFixed(3)}, Change: ${ratingChange}, New: ${existingStats.rating}`);
 
       localStorage.setItem('wk_session_stats', JSON.stringify(existingStats));
       console.log('[App] Session stats saved to localStorage:', existingStats);
