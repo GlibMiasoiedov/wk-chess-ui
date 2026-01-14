@@ -77,6 +77,7 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
     const [isProMode, setIsProMode] = useState(false);
     const [showExitConfirm, setShowExitConfirm] = useState(false);
     const [isReanalyzing, setIsReanalyzing] = useState(false);
+    const [ratingChange, setRatingChange] = useState(0);
     const [showFinalPosition, setShowFinalPosition] = useState(true); // Start with Final Position overlay visible
 
     // Initialize position when gameData changes
@@ -313,33 +314,36 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                 const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
 
                 // Base rating change from Elo
-                let ratingChange = K * (actualScore - expectedScore);
+                let calculatedChange = K * (actualScore - expectedScore);
 
                 // Performance modifier: adjust based on move quality
                 // If performance rating is much higher than current rating, bonus
                 // If performance rating is much lower than current rating, penalty
                 const performanceRatio = rating / Math.max(myRating, 400);
                 if (performanceRatio > 1.15) {
-                    ratingChange *= 1.3; // +30% bonus for excellent play
+                    calculatedChange *= 1.3; // +30% bonus for excellent play
                 } else if (performanceRatio > 1.05) {
-                    ratingChange *= 1.15; // +15% bonus for good play
+                    calculatedChange *= 1.15; // +15% bonus for good play
                 } else if (performanceRatio < 0.85) {
-                    ratingChange *= 0.7; // -30% for poor play
+                    calculatedChange *= 0.7; // -30% for poor play
                 } else if (performanceRatio < 0.95) {
-                    ratingChange *= 0.85; // -15% for below average
+                    calculatedChange *= 0.85; // -15% for below average
                 }
 
-                ratingChange = Math.round(ratingChange);
-                sessionStats.rating = Math.max(400, Math.min(3000, myRating + ratingChange));
-                sessionStats.lastRatingChange = ratingChange;
+                const finalRatingChange = Math.round(calculatedChange);
+                sessionStats.rating = Math.max(400, Math.min(3000, myRating + finalRatingChange));
+                sessionStats.lastRatingChange = finalRatingChange;
                 sessionStats.lastPerformanceRating = rating;
+
+                // Update UI state for rating change display
+                setRatingChange(finalRatingChange);
 
                 // Clear pending data
                 delete sessionStats.pendingOutcome;
                 delete sessionStats.pendingBotRating;
 
                 localStorage.setItem('wk_session_stats', JSON.stringify(sessionStats));
-                console.log(`[Analysis] Rating updated: ${myRating} → ${sessionStats.rating} (${ratingChange >= 0 ? '+' : ''}${ratingChange}), Performance: ${rating}`);
+                console.log(`[Analysis] Rating updated: ${myRating} → ${sessionStats.rating} (${finalRatingChange >= 0 ? '+' : ''}${finalRatingChange}), Performance: ${rating}`);
             } catch (e) {
                 console.error('[Analysis] Error updating session rating:', e);
             }
@@ -1422,9 +1426,9 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                             <div style={{ backgroundColor: '#151922', border: '1px solid #2A303C', padding: '14px', borderRadius: '8px', textAlign: 'center' }}>
                                                 <p style={{ color: '#64748B', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 6px 0' }}>Est. Rating</p>
                                                 <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'white', lineHeight: 1 }}>{estimatedRating || 1200}</div>
-                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', backgroundColor: 'rgba(74,222,128,0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(74,222,128,0.2)' }}>
-                                                    <Zap size={10} style={{ color: '#4ADE80' }} />
-                                                    <span style={{ color: '#4ADE80', fontSize: '9px', fontWeight: 'bold' }}>+200 pts</span>
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', backgroundColor: ratingChange >= 0 ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)', padding: '3px 8px', borderRadius: '4px', border: ratingChange >= 0 ? '1px solid rgba(74,222,128,0.2)' : '1px solid rgba(239,68,68,0.2)' }}>
+                                                    <Zap size={10} style={{ color: ratingChange >= 0 ? '#4ADE80' : '#EF4444' }} />
+                                                    <span style={{ color: ratingChange >= 0 ? '#4ADE80' : '#EF4444', fontSize: '9px', fontWeight: 'bold' }}>{ratingChange >= 0 ? '+' : ''}{ratingChange} pts</span>
                                                 </div>
                                             </div>
 
