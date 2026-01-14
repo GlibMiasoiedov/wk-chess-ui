@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "react-chessboard": path.resolve(__dirname, "./local_modules/react-chessboard-5.7.1-fixed/react-chessboard-5.7.1/src/index.ts"),
+      "react-chessboard": path.resolve(__dirname, "./src/lib/react-chessboard"),
       "@": path.resolve(__dirname, "./src"),
     },
   },
