@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Settings } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, Zap, X, Send } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
 
@@ -7,8 +7,11 @@ import ThemeToggle from '../components/ThemeToggle';
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    KIDS DESIGN - NEW GAME MODULE                             ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  🎨 Three-column layout: Left Sidebar | Center | Right Panel                 ║
-║  📐 Same responsive breakpoints as Adult layout                              ║
+║  🎨 Panel sizing matched to Adult layout:                                    ║
+║     • Left panel: 480px (desktop) / 50% (tablet)                             ║
+║     • Right panel: 500px (desktop) / 50% (tablet)                            ║
+║  📐 Same responsive breakpoints as Adult                                     ║
+║  💬 AI Chat with expandable drawer                                           ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 */
 
@@ -52,6 +55,27 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
 
     const isTablet = windowWidth >= 768 && windowWidth < 1200;
     const isMobile = windowWidth < 768;
+
+    // --- CHAT STATE (same as Adult ProfilePanel) ---
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatInput, setChatInput] = useState("");
+    const [messages, setMessages] = useState([
+        { id: 1, sender: 'bot', text: "Hi! Ready for your game? 🎉 Need a quick puzzle to warm up?" }
+    ]);
+    const msgsEndRef = useRef(null);
+
+    const handleSendMessage = () => {
+        if (!chatInput.trim()) return;
+        setMessages([...messages, { id: Date.now(), sender: 'user', text: chatInput }]);
+        setChatInput("");
+        setTimeout(() => {
+            setMessages(prev => [...prev, { id: Date.now(), sender: 'bot', text: "Great question! Let me think... 🤔" }]);
+        }, 1000);
+    };
+
+    useEffect(() => {
+        if (isChatOpen) msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isChatOpen]);
 
     const selectedBot = bots[selectedBotIndex];
 
@@ -126,33 +150,33 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
 
             {/* ═══════════════════ HEADER ═══════════════════ */}
             <header style={{
-                height: '56px',
+                height: '64px',
                 background: 'rgba(0,0,0,0.5)',
                 backdropFilter: 'blur(10px)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0 20px',
+                padding: '0 24px',
                 borderBottom: '2px solid rgba(255,217,61,0.2)',
                 position: 'relative',
                 zIndex: 100,
                 flexShrink: 0
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
                         width: '36px', height: '36px', background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
                         borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
                     }}>♞</div>
-                    <span style={{ fontWeight: '800', fontSize: '14px' }}>NEW GAME</span>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.27</span>
+                    <span style={{ fontWeight: '800', fontSize: '14px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>NEW GAME</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.28</span>
                     <ThemeToggle />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button onClick={onOpenLearning} style={{
                         padding: '8px 16px', background: 'linear-gradient(90deg, #a855f7, #6366f1)',
                         border: 'none', borderRadius: '16px', color: 'white', fontWeight: '700',
-                        fontSize: '11px', cursor: 'pointer', display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '6px'
-                    }}>📚 LEARN</button>
+                        fontSize: '12px', cursor: 'pointer', display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '6px'
+                    }}>📚 LEARN BASICS</button>
                     <button onClick={onClose} style={{
                         width: '36px', height: '36px', background: 'rgba(255,255,255,0.1)',
                         border: 'none', borderRadius: '10px', color: '#64748b', fontSize: '18px', cursor: 'pointer'
@@ -163,97 +187,197 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
             {/* ═══════════════════ MAIN AREA (3 columns) ═══════════════════ */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
-                {/* ═══════════════════ LEFT SIDEBAR ═══════════════════ */}
+                {/* ═══════════════════ LEFT PANEL (480px - same as Adult) ═══════════════════ */}
                 {!isMobile && (
                     <aside style={{
-                        width: '220px',
-                        minWidth: '220px',
+                        width: isTablet ? '50%' : '480px',
+                        flexShrink: 0,
+                        height: '100%',
                         background: 'rgba(0,0,0,0.3)',
-                        padding: '16px',
+                        borderRight: '2px solid rgba(255,217,61,0.1)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '12px',
-                        borderRight: '2px solid rgba(255,217,61,0.1)',
-                        overflowY: 'auto',
-                        flexShrink: 0
+                        position: 'relative',
+                        overflow: 'hidden'
                     }}>
-                        {/* Profile Card */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, rgba(255,217,61,0.15), rgba(255,159,67,0.1))',
-                            borderRadius: '16px', padding: '14px', border: '2px solid rgba(255,217,61,0.2)'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        {/* Scrollable content */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {/* Profile Card */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(255,217,61,0.15), rgba(255,159,67,0.1))',
+                                borderRadius: '16px', padding: '16px', border: '2px solid rgba(255,217,61,0.2)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                    <div style={{
+                                        width: '56px', height: '56px', background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
+                                        borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '20px', fontWeight: '800', color: '#1a1a2e'
+                                    }}>WK</div>
+                                    <div>
+                                        <div style={{ fontWeight: '700', fontSize: '16px' }}>HERO USER</div>
+                                        <div style={{ color: '#ffd93d', fontSize: '12px' }}>⭐ PRO MEMBER</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#ffd93d' }}>1346</div>
+                                        <div style={{ color: '#22c55e', fontSize: '11px', marginTop: '4px' }}>📈 +39</div>
+                                        <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>RATING</div>
+                                    </div>
+                                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '24px', fontWeight: '800' }}>14</div>
+                                        <div style={{ color: '#64748b', fontSize: '10px', marginTop: '6px' }}>🎮 GAMES</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Recent Awards */}
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#ffd93d', fontWeight: '700', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                    🏆 RECENT AWARDS
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                                    <div style={{ background: 'rgba(168,85,247,0.2)', borderRadius: '12px', padding: '14px', textAlign: 'center', border: '1px solid rgba(168,85,247,0.3)' }}>
+                                        <div style={{ fontSize: '28px' }}>🎯</div>
+                                        <div style={{ fontSize: '11px', fontWeight: '700', marginTop: '6px' }}>Tactical Master</div>
+                                    </div>
+                                    <div style={{ background: 'rgba(78,205,196,0.2)', borderRadius: '12px', padding: '14px', textAlign: 'center', border: '1px solid rgba(78,205,196,0.3)' }}>
+                                        <div style={{ fontSize: '28px' }}>🔥</div>
+                                        <div style={{ fontSize: '11px', fontWeight: '700', marginTop: '6px' }}>Streak x5</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Upcoming Sessions */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(78,205,196,0.15), rgba(34,197,94,0.1))',
+                                borderRadius: '14px', padding: '16px', border: '2px solid rgba(78,205,196,0.2)',
+                                position: 'relative', overflow: 'hidden'
+                            }}>
+                                <div style={{ fontSize: '11px', color: '#4ecdc4', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                    📅 UPCOMING LIVE SESSIONS
+                                </div>
+                                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ background: '#ffd93d', borderRadius: '10px', padding: '8px 14px', textAlign: 'center', color: '#1a1a2e' }}>
+                                        <div style={{ fontSize: '9px', fontWeight: '700' }}>JAN</div>
+                                        <div style={{ fontSize: '20px', fontWeight: '800' }}>17</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: '700', fontSize: '13px' }}>ADVANCED ENDGAMES</div>
+                                        <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>👩‍🏫 Real Human Coach</div>
+                                    </div>
+                                </div>
+                                <button style={{
+                                    width: '100%', marginTop: '12px', padding: '12px',
+                                    background: 'rgba(78,205,196,0.2)',
+                                    border: '1px solid rgba(78,205,196,0.4)',
+                                    borderRadius: '10px', color: '#4ecdc4', fontWeight: '700',
+                                    fontSize: '11px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em'
+                                }}>
+                                    BOOK LESSON →
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* AI Chat Widget (clickable to expand) */}
+                        <div
+                            onClick={() => setIsChatOpen(true)}
+                            style={{
+                                margin: '16px',
+                                background: 'linear-gradient(135deg, rgba(255,107,157,0.2), rgba(168,85,247,0.2))',
+                                borderRadius: '14px', padding: '14px',
+                                border: '2px solid rgba(255,107,157,0.3)',
+                                cursor: 'pointer',
+                                transition: 'border-color 0.2s'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{
-                                    width: '40px', height: '40px', background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
-                                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '14px', fontWeight: '800', color: '#1a1a2e'
-                                }}>WK</div>
-                                <div>
-                                    <div style={{ fontWeight: '700', fontSize: '13px' }}>HERO</div>
-                                    <div style={{ color: '#ffd93d', fontSize: '10px' }}>⭐ 1450</div>
+                                    width: '36px', height: '36px', background: 'linear-gradient(135deg, #ff6b9d, #a855f7)',
+                                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                                }}>
+                                    <Zap size={18} fill="currentColor" />
                                 </div>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '16px', fontWeight: '800', color: '#ffd93d' }}>1346</div>
-                                    <div style={{ color: '#22c55e', fontSize: '9px' }}>📈 +39</div>
+                                <div style={{ flex: 1 }}>
+                                    <span style={{ fontWeight: '700', fontSize: '12px' }}>AI Assistant</span>
+                                    <div style={{ color: '#64748b', fontSize: '10px' }}>Need help? Ask me! 🎉</div>
                                 </div>
-                                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '16px', fontWeight: '800' }}>13</div>
-                                    <div style={{ color: '#64748b', fontSize: '9px' }}>🎮 games</div>
-                                </div>
+                                <span style={{ color: '#a855f7', fontSize: '18px' }}>›</span>
                             </div>
                         </div>
 
-                        {/* Awards */}
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                            <div style={{ flex: 1, background: 'rgba(168,85,247,0.2)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '20px' }}>🎯</div>
-                                <div style={{ fontSize: '8px', fontWeight: '600' }}>Tactician</div>
-                            </div>
-                            <div style={{ flex: 1, background: 'rgba(78,205,196,0.2)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '20px' }}>🔥</div>
-                                <div style={{ fontSize: '8px', fontWeight: '600' }}>Streak x5</div>
-                            </div>
-                        </div>
-
-                        {/* Next Lesson */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, rgba(78,205,196,0.15), rgba(34,197,94,0.1))',
-                            borderRadius: '12px', padding: '12px', border: '2px solid rgba(78,205,196,0.2)'
-                        }}>
-                            <div style={{ fontSize: '9px', color: '#4ecdc4', fontWeight: '700', marginBottom: '8px' }}>
-                                📅 NEXT LESSON
-                            </div>
-                            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ background: '#ffd93d', borderRadius: '6px', padding: '4px 8px', textAlign: 'center', color: '#1a1a2e' }}>
-                                    <div style={{ fontSize: '7px', fontWeight: '700' }}>JAN</div>
-                                    <div style={{ fontSize: '14px', fontWeight: '800' }}>17</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: '700', fontSize: '11px' }}>ENDGAMES</div>
-                                    <div style={{ color: '#64748b', fontSize: '8px' }}>👩‍🏫 Coach Sarah</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* AI Chat */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(168,85,247,0.1))',
-                            borderRadius: '12px', padding: '12px', border: '2px solid rgba(255,107,157,0.2)',
-                            marginTop: 'auto'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        {/* Chat Drawer (overlay when open) */}
+                        {isChatOpen && (
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                                display: 'flex', flexDirection: 'column',
+                                zIndex: 50
+                            }}>
+                                {/* Header */}
                                 <div style={{
-                                    width: '28px', height: '28px', background: 'linear-gradient(135deg, #ff6b9d, #a855f7)',
-                                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
-                                }}>🤖</div>
-                                <span style={{ fontWeight: '700', fontSize: '11px' }}>AI Helper</span>
+                                    padding: '16px', borderBottom: '1px solid rgba(255,217,61,0.2)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{
+                                            width: '36px', height: '36px', background: 'linear-gradient(135deg, #ff6b9d, #a855f7)',
+                                            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        }}>
+                                            <Zap size={18} fill="currentColor" />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: '700', fontSize: '13px' }}>White Knight AI</div>
+                                            <div style={{ color: '#22c55e', fontSize: '10px' }}>● Online</div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setIsChatOpen(false)} style={{
+                                        background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px',
+                                        width: '32px', height: '32px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <X size={18} />
+                                    </button>
+                                </div>
+
+                                {/* Messages */}
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {messages.map(msg => (
+                                        <div key={msg.id} style={{
+                                            alignSelf: msg.sender === 'bot' ? 'flex-start' : 'flex-end',
+                                            background: msg.sender === 'bot' ? 'rgba(168,85,247,0.2)' : 'rgba(255,217,61,0.2)',
+                                            border: msg.sender === 'bot' ? '1px solid rgba(168,85,247,0.3)' : '1px solid rgba(255,217,61,0.3)',
+                                            borderRadius: '12px', padding: '10px 14px', maxWidth: '80%',
+                                            fontSize: '13px'
+                                        }}>
+                                            {msg.text}
+                                        </div>
+                                    ))}
+                                    <div ref={msgsEndRef} />
+                                </div>
+
+                                {/* Input */}
+                                <div style={{ padding: '12px', borderTop: '1px solid rgba(255,217,61,0.2)', display: 'flex', gap: '10px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Type your question..."
+                                        value={chatInput}
+                                        onChange={(e) => setChatInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                        style={{
+                                            flex: 1, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                                            borderRadius: '10px', padding: '12px', color: 'white', fontSize: '13px', outline: 'none'
+                                        }}
+                                    />
+                                    <button onClick={handleSendMessage} style={{
+                                        background: 'linear-gradient(135deg, #ffd93d, #ff9f43)', border: 'none',
+                                        borderRadius: '10px', width: '44px', color: '#1a1a2e', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <Send size={18} />
+                                    </button>
+                                </div>
                             </div>
-                            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '8px', fontSize: '11px' }}>
-                                Hi! Need help? 🎉
-                            </div>
-                        </div>
+                        )}
                     </aside>
                 )}
 
@@ -275,8 +399,8 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
 
                     {/* Bot Avatar */}
                     <button onClick={handleNextBot} style={{
-                        width: isMobile ? '140px' : '160px',
-                        height: isMobile ? '140px' : '160px',
+                        width: isMobile ? '140px' : '180px',
+                        height: isMobile ? '140px' : '180px',
                         background: `radial-gradient(circle, ${selectedBot.color}33 0%, transparent 70%)`,
                         border: `4px solid ${selectedBot.color}`,
                         borderRadius: '50%',
@@ -286,46 +410,46 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         justifyContent: 'center',
                         cursor: 'pointer',
                         position: 'relative',
-                        boxShadow: `0 0 40px ${selectedBot.color}40`,
+                        boxShadow: `0 0 50px ${selectedBot.color}40`,
                         marginBottom: '40px'
                     }}>
-                        <div style={{ fontSize: isMobile ? '50px' : '60px' }}>{selectedBot.emoji}</div>
+                        <div style={{ fontSize: isMobile ? '50px' : '70px' }}>{selectedBot.emoji}</div>
                         <div style={{
-                            position: 'absolute', bottom: '-14px',
-                            background: '#ffd93d', padding: '5px 16px', borderRadius: '16px',
-                            color: '#1a1a2e', fontWeight: '800', fontSize: '11px'
+                            position: 'absolute', bottom: '-16px',
+                            background: '#ffd93d', padding: '6px 20px', borderRadius: '20px',
+                            color: '#1a1a2e', fontWeight: '800', fontSize: '12px'
                         }}>Rating: {selectedBot.rating}</div>
                     </button>
 
                     {/* Settings Grid */}
                     <div style={{
                         width: '100%',
-                        maxWidth: '300px',
+                        maxWidth: '340px',
                         display: 'grid',
                         gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: '10px'
+                        gap: '12px'
                     }}>
                         <button onClick={() => {
                             const times = timeControls.map(t => t.value);
                             const idx = times.indexOf(selectedTime);
                             setSelectedTime(times[(idx + 1) % times.length]);
                         }} style={{
-                            padding: '12px', background: 'rgba(255,255,255,0.05)',
-                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                            padding: '14px', background: 'rgba(255,255,255,0.05)',
+                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '14px',
                             cursor: 'pointer', textAlign: 'center', color: 'white'
                         }}>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '3px' }}>TIME</div>
-                            <div style={{ fontSize: '14px', fontWeight: '700' }}>
+                            <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>TIME</div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>
                                 {timeControls.find(t => t.value === selectedTime)?.emoji} {selectedTime.replace('|0', 'm').replace('|', '+')}
                             </div>
                         </button>
                         <button onClick={() => setGameType(g => g === 'STANDARD' ? 'CHESS960' : 'STANDARD')} style={{
-                            padding: '12px', background: 'rgba(255,255,255,0.05)',
-                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                            padding: '14px', background: 'rgba(255,255,255,0.05)',
+                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '14px',
                             cursor: 'pointer', textAlign: 'center', color: 'white'
                         }}>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '3px' }}>MODE</div>
-                            <div style={{ fontSize: '14px', fontWeight: '700' }}>
+                            <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>MODE</div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>
                                 {gameType === 'STANDARD' ? '♟️' : '🎲'} {gameType === 'STANDARD' ? 'Standard' : '960'}
                             </div>
                         </button>
@@ -334,22 +458,22 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                             const idx = sides.indexOf(selectedSide);
                             setSelectedSide(sides[(idx + 1) % sides.length]);
                         }} style={{
-                            padding: '12px', background: 'rgba(255,255,255,0.05)',
-                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                            padding: '14px', background: 'rgba(255,255,255,0.05)',
+                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '14px',
                             cursor: 'pointer', textAlign: 'center', color: 'white'
                         }}>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '3px' }}>SIDE</div>
-                            <div style={{ fontSize: '14px', fontWeight: '700' }}>
+                            <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>SIDE</div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>
                                 {selectedSide === 'WHITE' ? '⬜' : selectedSide === 'BLACK' ? '⬛' : '🎲'} {selectedSide}
                             </div>
                         </button>
                         <button onClick={handleNextBot} style={{
-                            padding: '12px', background: 'rgba(255,255,255,0.05)',
-                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                            padding: '14px', background: 'rgba(255,255,255,0.05)',
+                            border: '2px solid rgba(255,255,255,0.1)', borderRadius: '14px',
                             cursor: 'pointer', textAlign: 'center', color: 'white'
                         }}>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '3px' }}>DIFF</div>
-                            <div style={{ color: selectedBot.color, fontSize: '14px', fontWeight: '700' }}>
+                            <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>DIFF</div>
+                            <div style={{ color: selectedBot.color, fontSize: '16px', fontWeight: '700' }}>
                                 {selectedBot.emoji} {selectedBot.name}
                             </div>
                         </button>
@@ -358,17 +482,17 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                     {/* Start Button */}
                     <button onClick={handleStartGame} style={{
                         width: '100%',
-                        maxWidth: '300px',
-                        marginTop: '20px',
-                        padding: '16px 40px',
+                        maxWidth: '340px',
+                        marginTop: '24px',
+                        padding: '18px 40px',
                         background: 'linear-gradient(90deg, #ffd93d, #ff9f43)',
                         border: 'none',
-                        borderRadius: '16px',
+                        borderRadius: '20px',
                         color: '#1a1a2e',
                         fontWeight: '800',
-                        fontSize: '15px',
+                        fontSize: '16px',
                         cursor: 'pointer',
-                        boxShadow: '0 6px 30px rgba(255,217,61,0.4)',
+                        boxShadow: '0 6px 30px rgba(255,217,61,0.5)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -389,7 +513,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         border: '2px solid rgba(255,217,61,0.3)',
                         borderRight: 'none',
                         borderRadius: '16px 0 0 16px',
-                        padding: '16px 10px',
+                        padding: '16px 12px',
                         cursor: 'pointer',
                         zIndex: 40,
                         display: 'flex',
@@ -405,11 +529,11 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                     </div>
                 )}
 
-                {/* ═══════════════════ RIGHT PANEL ═══════════════════ */}
+                {/* ═══════════════════ RIGHT PANEL (500px - same as Adult) ═══════════════════ */}
                 {!isMobile && (
                     <aside style={{
-                        width: isTablet ? '280px' : '280px',
-                        minWidth: isTablet ? '280px' : '280px',
+                        width: isTablet ? '50%' : '500px',
+                        flexShrink: 0,
                         background: 'rgba(0,0,0,0.4)',
                         borderLeft: '2px solid rgba(255,217,61,0.1)',
                         display: 'flex',
@@ -422,84 +546,86 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         height: '100%',
                         transform: isTablet && !showRightPanel ? 'translateX(100%)' : 'translateX(0)',
                         transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                        padding: '16px',
-                        overflowY: 'auto',
-                        flexShrink: 0
+                        padding: '20px',
+                        overflowY: 'auto'
                     }}>
                         {/* Close button for tablet */}
                         {isTablet && showRightPanel && (
                             <button onClick={() => setShowRightPanel(false)} style={{
-                                position: 'absolute', top: '12px', right: '12px',
-                                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px',
-                                width: '32px', height: '32px', color: 'white', fontSize: '16px', cursor: 'pointer'
+                                position: 'absolute', top: '16px', right: '16px',
+                                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px',
+                                width: '36px', height: '36px', color: 'white', fontSize: '18px', cursor: 'pointer'
                             }}>×</button>
                         )}
 
                         {/* Help Button */}
                         <button onClick={() => setShowHelp(true)} style={{
-                            width: '100%', padding: '12px', marginBottom: '14px',
+                            width: '100%', padding: '16px', marginBottom: '20px',
                             background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(99,102,241,0.2))',
-                            border: '2px solid rgba(168,85,247,0.3)', borderRadius: '12px',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px'
+                            border: '2px solid rgba(168,85,247,0.3)', borderRadius: '16px',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px'
                         }}>
                             <div style={{
-                                width: '32px', height: '32px', background: 'linear-gradient(135deg, #a855f7, #6366f1)',
-                                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                                width: '44px', height: '44px', background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+                                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px'
                             }}>🤔</div>
-                            <span style={{ color: 'white', fontWeight: '700', fontSize: '11px' }}>NEW TO CHESS?</span>
-                            <span style={{ marginLeft: 'auto', color: '#64748b' }}>›</span>
+                            <div style={{ flex: 1, textAlign: 'left' }}>
+                                <div style={{ color: 'white', fontWeight: '700', fontSize: '14px' }}>I DON'T KNOW HOW TO PLAY</div>
+                                <div style={{ color: '#64748b', fontSize: '11px' }}>Learn the rules in our Academy</div>
+                            </div>
+                            <span style={{ color: '#64748b', fontSize: '20px' }}>›</span>
                         </button>
 
                         {/* Game Type */}
-                        <div style={{ marginBottom: '14px' }}>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '6px' }}>⚙️ GAME TYPE</div>
-                            <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em' }}>⚙️ GAME TYPE</div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
                                 {['STANDARD', 'CHESS960'].map(type => (
                                     <button key={type} onClick={() => setGameType(type)} style={{
-                                        flex: 1, padding: '10px',
+                                        flex: 1, padding: '14px',
                                         background: gameType === type ? '#ffd93d' : 'rgba(255,255,255,0.05)',
-                                        border: 'none', borderRadius: '8px',
+                                        border: 'none', borderRadius: '12px',
                                         color: gameType === type ? '#1a1a2e' : 'white',
-                                        fontWeight: '700', fontSize: '9px', cursor: 'pointer'
+                                        fontWeight: '700', fontSize: '12px', cursor: 'pointer'
                                     }}>{type === 'STANDARD' ? '♟️' : '🎲'} {type === 'CHESS960' ? '960' : type}</button>
                                 ))}
                             </div>
                         </div>
 
                         {/* Difficulty Slider */}
-                        <div style={{ marginBottom: '14px' }}>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '6px' }}>🎯 DIFFICULTY</div>
-                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em' }}>🎯 DIFFICULTY</div>
+                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '16px' }}>
                                 <input type="range" min="0" max={bots.length - 1} value={selectedBotIndex}
                                     onChange={(e) => setSelectedBotIndex(parseInt(e.target.value))}
-                                    style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'linear-gradient(90deg, #4ecdc4, #ffd93d, #ef4444)', WebkitAppearance: 'none', cursor: 'pointer' }}
+                                    style={{ width: '100%', height: '10px', borderRadius: '5px', background: 'linear-gradient(90deg, #4ecdc4, #ffd93d, #ef4444)', WebkitAppearance: 'none', cursor: 'pointer' }}
                                 />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10px' }}>
                                     <span style={{ color: '#4ecdc4' }}>EASY</span>
                                     <span style={{ color: '#ffd93d' }}>MEDIUM</span>
                                     <span style={{ color: '#ef4444' }}>HARD</span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
-                                    <span style={{ fontSize: '20px' }}>{selectedBot.emoji}</span>
-                                    <span style={{ fontWeight: '700', fontSize: '11px' }}>{selectedBot.name}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '14px', padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '12px' }}>
+                                    <span style={{ fontSize: '28px' }}>{selectedBot.emoji}</span>
+                                    <span style={{ fontWeight: '700', fontSize: '14px' }}>{selectedBot.name}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Time Control */}
-                        <div style={{ marginBottom: '14px' }}>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '6px' }}>⏱️ TIME</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em' }}>⏱️ TIME CONTROL</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                                 {timeControls.map(time => (
                                     <button key={time.value} onClick={() => setSelectedTime(time.value)} style={{
-                                        padding: '8px 4px',
+                                        padding: '12px 8px',
                                         background: selectedTime === time.value ? '#ffd93d' : 'rgba(255,255,255,0.05)',
-                                        border: 'none', borderRadius: '8px',
+                                        border: 'none', borderRadius: '12px',
                                         color: selectedTime === time.value ? '#1a1a2e' : 'white',
-                                        fontWeight: '600', fontSize: '9px', cursor: 'pointer',
-                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'
+                                        fontWeight: '600', fontSize: '11px', cursor: 'pointer',
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
                                     }}>
-                                        <span style={{ fontSize: '12px' }}>{time.emoji}</span>
+                                        <span style={{ fontSize: '16px' }}>{time.emoji}</span>
                                         <span>{time.label}</span>
                                     </button>
                                 ))}
@@ -508,17 +634,17 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
 
                         {/* Side Selection */}
                         <div>
-                            <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '6px' }}>✨ PLAY AS</div>
-                            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', overflow: 'hidden' }}>
+                            <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em' }}>✨ PLAY AS (SELECTED: {selectedSide})</div>
+                            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', overflow: 'hidden' }}>
                                 {[{ v: 'WHITE', e: '⬜' }, { v: 'RANDOM', e: '🎲' }, { v: 'BLACK', e: '⬛' }].map(s => (
                                     <button key={s.v} onClick={() => setSelectedSide(s.v)} style={{
-                                        flex: 1, padding: '10px', border: 'none',
+                                        flex: 1, padding: '14px', border: 'none',
                                         background: selectedSide === s.v ? '#4ecdc4' : 'transparent',
                                         color: selectedSide === s.v ? '#1a1a2e' : 'white',
-                                        fontWeight: '700', fontSize: '9px', cursor: 'pointer',
-                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'
+                                        fontWeight: '700', fontSize: '11px', cursor: 'pointer',
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
                                     }}>
-                                        <span style={{ fontSize: '14px' }}>{s.e}</span>
+                                        <span style={{ fontSize: '18px' }}>{s.e}</span>
                                         <span>{s.v}</span>
                                     </button>
                                 ))}
