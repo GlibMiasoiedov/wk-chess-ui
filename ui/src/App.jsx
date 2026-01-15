@@ -50,19 +50,42 @@ export default function App() {
     try {
       const existingStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 0, "lastRatingChange": 0}');
 
-      // Determine result
+      // Determine result - handle multiple possible data formats
       const result = data.result;
+      console.log('[App] Result object:', JSON.stringify(result), 'PlayerColor:', data.playerColor);
+
       let outcome = 'draw'; // default
-      if (result?.winner) {
+
+      // Format 1: result.result = 'win'/'loss'/'draw'
+      if (result?.result === 'win') {
+        outcome = 'win';
+      } else if (result?.result === 'loss') {
+        outcome = 'loss';
+      } else if (result?.result === 'draw') {
+        outcome = 'draw';
+      }
+      // Format 2: result.winner = 'player'/'bot'
+      else if (result?.winner === 'player') {
+        outcome = 'win';
+      } else if (result?.winner === 'bot' || result?.winner === 'opponent') {
+        outcome = 'loss';
+      }
+      // Format 3: result.winner = 'w'/'b' (color-based)
+      else if (result?.winner) {
         outcome = result.winner === data.playerColor ? 'win' : 'loss';
-      } else if (result?.reason === 'checkmate') {
+      }
+      // Format 4: Checkmate with reason
+      else if (result?.reason === 'checkmate') {
+        // The last mover won
         const lastMoverColor = data.moves?.length % 2 === 0 ? 'b' : 'w';
         outcome = lastMoverColor === data.playerColor ? 'win' : 'loss';
-      } else if (result?.reason === 'resignation') {
-        outcome = result.loser === data.playerColor ? 'loss' : 'win';
-      } else if (result?.reason === 'timeout') {
+      }
+      // Format 5: resignation/timeout with loser
+      else if (result?.reason === 'resignation' || result?.reason === 'timeout') {
         outcome = result.loser === data.playerColor ? 'loss' : 'win';
       }
+
+      console.log('[App] Determined outcome:', outcome);
 
       // Update game counts (rating updated after Stockfish analysis in WhiteKnightAnalysis.jsx)
       existingStats.games += 1;
@@ -75,7 +98,7 @@ export default function App() {
       existingStats.pendingBotRating = gameSettings?.bot?.rating || 1200;
 
       localStorage.setItem('wk_session_stats', JSON.stringify(existingStats));
-      console.log('[App] Game outcome saved, rating will be calculated after analysis:', existingStats);
+      console.log('[App] Game outcome saved:', { outcome, botRating: existingStats.pendingBotRating, stats: existingStats });
     } catch (e) {
       console.error('[App] Error saving game outcome:', e);
     }
