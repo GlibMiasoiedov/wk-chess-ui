@@ -297,41 +297,67 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
 
             // Update session stats with performance-based rating
             try {
-                const sessionStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 1200, "lastRatingChange": 0}');
+                const sessionStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 0, "lastRatingChange": 0}');
 
                 const myRating = sessionStats.rating;
                 const botRating = sessionStats.pendingBotRating || 1200;
                 const outcome = sessionStats.pendingOutcome || 'draw';
                 const totalGames = sessionStats.games;
 
-                // K-Factor: 40 for new players (<30 games), 20 for established
-                const K = totalGames < 30 ? 40 : 20;
+                let newRating, finalRatingChange;
 
-                // Actual score: 1 for win, 0.5 for draw, 0 for loss
-                const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
+                // PROVISIONAL RATING SYSTEM (first 5 games)
+                if (totalGames <= 5) {
+                    // For new players: Rating based on opponent rating ± 400
+                    if (outcome === 'win') {
+                        newRating = botRating + 400;
+                    } else if (outcome === 'draw') {
+                        newRating = botRating;
+                    } else { // loss
+                        newRating = botRating - 400;
+                    }
 
-                // Expected score based on rating difference (Elo formula)
-                const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
+                    // Apply performance modifier for provisional
+                    const performanceRatio = rating / Math.max(botRating, 400);
+                    if (performanceRatio > 1.15) {
+                        newRating = Math.round(newRating * 1.1); // +10% for excellent play
+                    } else if (performanceRatio < 0.85) {
+                        newRating = Math.round(newRating * 0.9); // -10% for poor play
+                    }
 
-                // Base rating change from Elo
-                let calculatedChange = K * (actualScore - expectedScore);
+                    // For games 2-5, blend with previous rating
+                    if (totalGames > 1 && myRating > 0) {
+                        newRating = Math.round((myRating * (totalGames - 1) + newRating) / totalGames);
+                    }
 
-                // Performance modifier: adjust based on move quality
-                // If performance rating is much higher than current rating, bonus
-                // If performance rating is much lower than current rating, penalty
-                const performanceRatio = rating / Math.max(myRating, 400);
-                if (performanceRatio > 1.15) {
-                    calculatedChange *= 1.3; // +30% bonus for excellent play
-                } else if (performanceRatio > 1.05) {
-                    calculatedChange *= 1.15; // +15% bonus for good play
-                } else if (performanceRatio < 0.85) {
-                    calculatedChange *= 0.7; // -30% for poor play
-                } else if (performanceRatio < 0.95) {
-                    calculatedChange *= 0.85; // -15% for below average
+                    finalRatingChange = newRating - myRating;
+
+                } else {
+                    // STANDARD ELO (6+ games)
+                    const K = totalGames < 30 ? 40 : 20;
+                    const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
+                    const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
+
+                    let calculatedChange = K * (actualScore - expectedScore);
+
+                    // Performance modifier
+                    const performanceRatio = rating / Math.max(myRating, 400);
+                    if (performanceRatio > 1.15) {
+                        calculatedChange *= 1.3;
+                    } else if (performanceRatio > 1.05) {
+                        calculatedChange *= 1.15;
+                    } else if (performanceRatio < 0.85) {
+                        calculatedChange *= 0.7;
+                    } else if (performanceRatio < 0.95) {
+                        calculatedChange *= 0.85;
+                    }
+
+                    finalRatingChange = Math.round(calculatedChange);
+                    newRating = myRating + finalRatingChange;
                 }
 
-                const finalRatingChange = Math.round(calculatedChange);
-                sessionStats.rating = Math.max(400, Math.min(3000, myRating + finalRatingChange));
+                // Clamp rating between 0 and 3000
+                sessionStats.rating = Math.max(0, Math.min(3000, newRating));
                 sessionStats.lastRatingChange = finalRatingChange;
                 sessionStats.lastPerformanceRating = rating;
 
@@ -343,7 +369,7 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                 delete sessionStats.pendingBotRating;
 
                 localStorage.setItem('wk_session_stats', JSON.stringify(sessionStats));
-                console.log(`[Analysis] Rating updated: ${myRating} → ${sessionStats.rating} (${finalRatingChange >= 0 ? '+' : ''}${finalRatingChange}), Performance: ${rating}`);
+                console.log(`[Analysis] Rating updated: ${myRating} → ${sessionStats.rating} (${finalRatingChange >= 0 ? '+' : ''}${finalRatingChange}), Performance: ${rating}, Games: ${totalGames}`);
             } catch (e) {
                 console.error('[Analysis] Error updating session rating:', e);
             }
@@ -1290,7 +1316,7 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                             </div>
                                             <div>
                                                 <div style={{ color: 'white', fontSize: '15px', fontWeight: 'bold', marginBottom: '2px' }}>Hero User</div>
-                                                <div style={{ color: '#94A3B8', fontSize: '12px', fontFamily: 'monospace' }}>Rating: ~1200</div>
+                                                <div style={{ color: '#94A3B8', fontSize: '12px', fontFamily: 'monospace' }}>Rating: Calculating...</div>
                                             </div>
                                         </div>
                                         <div style={{

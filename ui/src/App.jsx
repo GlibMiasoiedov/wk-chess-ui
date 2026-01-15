@@ -48,7 +48,7 @@ export default function App() {
 
     // Save game outcome to localStorage (rating will be calculated after Stockfish analysis)
     try {
-      const existingStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 1200, "lastRatingChange": 0}');
+      const existingStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 0, "lastRatingChange": 0}');
 
       // Determine result
       const result = data.result;

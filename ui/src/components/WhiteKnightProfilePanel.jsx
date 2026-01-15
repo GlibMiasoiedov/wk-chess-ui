@@ -909,7 +909,7 @@ export default function WhiteKnightProfilePanel({ isMobile }) {
   const [showExitWarning, setShowExitWarning] = useState(false);
 
   // Session Stats from localStorage (for non-logged users)
-  const [sessionStats, setSessionStats] = useState({ games: 0, rating: 1200, wins: 0, losses: 0, draws: 0 });
+  const [sessionStats, setSessionStats] = useState({ games: 0, rating: 0, wins: 0, losses: 0, draws: 0, lastRatingChange: 0 });
 
   // Load session stats from localStorage on mount
   useEffect(() => {
