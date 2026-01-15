@@ -9,6 +9,8 @@ import {
 import DebugConsole from './components/DebugConsole.jsx';
 import WhiteKnightProfilePanel from './components/WhiteKnightProfilePanel.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
+import { useTheme } from './context/ThemeContext';
+import WhiteKnightNewGameKids from './kids/WhiteKnightNewGameKids.jsx';
 
 // --- THEME CONSTANTS ---
 const THEME = {
@@ -58,7 +60,15 @@ const ALL_TIME_OPTS = [
     ...TIME_CATEGORIES.rapid
 ];
 
-export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobile }) {
+export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, onClose, isMobile }) {
+    // Theme context for Kids/Adult mode
+    const { isKidsMode } = useTheme();
+
+    // Render Kids version if in Kids mode
+    if (isKidsMode) {
+        return <WhiteKnightNewGameKids onStartGame={onStartGame} onOpenLearning={onOpenLearning} onClose={onClose} />;
+    }
+
     // 👇 TEST BOARD STATE
     const [testGame, setTestGame] = useState(new Chess());
 
