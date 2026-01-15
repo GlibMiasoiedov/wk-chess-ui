@@ -52,7 +52,9 @@ function ChessBoardInternal({
     showMoveHints = false,
     getValidMoves = null,
     boardWidth,
-    customArrows = []
+    customArrows = [],
+    customDarkSquareStyle = { backgroundColor: '#779556' },
+    customLightSquareStyle = { backgroundColor: '#ebecd0' }
 }) {
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(400);
@@ -279,8 +281,8 @@ function ChessBoardInternal({
                 }}
                 squareStyles={customSquareStyles}
                 dropSquareStyle={{ boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' }}
-                customDarkSquareStyle={{ backgroundColor: '#779556' }}
-                customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
+                customDarkSquareStyle={customDarkSquareStyle}
+                customLightSquareStyle={customLightSquareStyle}
                 animationDuration={200}
                 arePiecesDraggable={!disabled}
                 showBoardNotation={true}

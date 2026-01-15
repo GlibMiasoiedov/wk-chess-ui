@@ -547,11 +547,11 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                     <aside style={{
                         width: isTablet ? '50%' : '500px',
                         flexShrink: 0,
-                        background: 'rgba(0,0,0,0.4)',
-                        borderLeft: '2px solid rgba(255,217,61,0.1)',
+                        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                        borderLeft: '2px solid rgba(255,217,61,0.2)',
                         display: 'flex',
                         flexDirection: 'column',
-                        boxShadow: '-10px 0 40px rgba(0,0,0,0.3)',
+                        boxShadow: '-10px 0 40px rgba(0,0,0,0.5)',
                         zIndex: 60,
                         position: isTablet ? 'absolute' : 'relative',
                         right: 0,
@@ -566,9 +566,15 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         {isTablet && showRightPanel && (
                             <button onClick={() => setShowRightPanel(false)} style={{
                                 position: 'absolute', top: '16px', right: '16px',
-                                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px',
-                                width: '36px', height: '36px', color: 'white', fontSize: '18px', cursor: 'pointer'
-                            }}>×</button>
+                                padding: '10px',
+                                background: 'rgba(255,255,255,0.1)',
+                                borderRadius: '50%',
+                                border: 'none',
+                                color: 'white',
+                                cursor: 'pointer'
+                            }}>
+                                <X size={22} />
+                            </button>
                         )}
 
                         {/* Help Button */}
