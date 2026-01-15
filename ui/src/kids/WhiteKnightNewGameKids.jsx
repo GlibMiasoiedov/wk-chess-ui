@@ -332,10 +332,12 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                                         </div>
                                     </div>
                                     <button onClick={() => setIsChatOpen(false)} style={{
-                                        background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px',
-                                        width: '32px', height: '32px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '10px',
+                                        width: '36px', height: '36px', color: 'white', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '20px', fontWeight: '700'
                                     }}>
-                                        <X size={18} />
+                                        ×
                                     </button>
                                 </div>
 
@@ -370,10 +372,11 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                                     />
                                     <button onClick={handleSendMessage} style={{
                                         background: 'linear-gradient(135deg, #ffd93d, #ff9f43)', border: 'none',
-                                        borderRadius: '10px', width: '44px', color: '#1a1a2e', cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        borderRadius: '10px', width: '50px', height: '48px', color: '#1a1a2e', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '18px', fontWeight: '700'
                                     }}>
-                                        <Send size={18} />
+                                        ➤
                                     </button>
                                 </div>
                             </div>
