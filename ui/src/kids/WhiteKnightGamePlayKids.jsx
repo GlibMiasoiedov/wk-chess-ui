@@ -124,6 +124,26 @@ const formatTime = (s) => {
     return `${m}:${sec.toString().padStart(2, '0')}`;
 };
 
+// Helper to parse timeControl (handles both object and string formats)
+const getTimeInSeconds = (tc) => {
+    if (!tc) return 600; // default 10 min
+    if (typeof tc === 'object' && tc.minutes !== undefined) {
+        return tc.minutes * 60;
+    }
+    if (typeof tc === 'string') {
+        return parseInt(tc.split('+')[0]) * 60;
+    }
+    return 600;
+};
+
+const formatTimeControl = (tc) => {
+    if (!tc) return '10+0';
+    if (typeof tc === 'object' && tc.minutes !== undefined) {
+        return `${tc.minutes}+${tc.increment || 0}`;
+    }
+    return tc;
+};
+
 // --- MAIN COMPONENT ---
 export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile }) {
     const { toggleTheme } = useTheme();
@@ -133,9 +153,10 @@ export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile 
     } = useChessGame();
 
     const [boardOrientation, setBoardOrientation] = useState('white');
-    const [whiteTime, setWhiteTime] = useState(settings?.timeControl ? parseInt(settings.timeControl.split('+')[0]) * 60 : 600);
-    const [blackTime, setBlackTime] = useState(settings?.timeControl ? parseInt(settings.timeControl.split('+')[0]) * 60 : 600);
-    const [clocks, setClocks] = useState({ w: whiteTime, b: blackTime });
+    const initialTimeSeconds = getTimeInSeconds(settings?.timeControl);
+    const [whiteTime, setWhiteTime] = useState(initialTimeSeconds);
+    const [blackTime, setBlackTime] = useState(initialTimeSeconds);
+    const [clocks, setClocks] = useState({ w: initialTimeSeconds, b: initialTimeSeconds });
     const [gameStarted, setGameStarted] = useState(false);
     const [showResignConfirm, setShowResignConfirm] = useState(false);
 
@@ -161,8 +182,7 @@ export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile 
             const timer = setTimeout(() => {
                 setBoardOrientation(playerColor === 'b' ? 'black' : 'white');
             }, 100);
-            const tc = settings?.timeControl || '10+0';
-            const initialSeconds = parseInt(tc.split('+')[0]) * 60;
+            const initialSeconds = getTimeInSeconds(settings?.timeControl);
             setWhiteTime(initialSeconds);
             setBlackTime(initialSeconds);
             setClocks({ w: initialSeconds, b: initialSeconds });
@@ -174,7 +194,7 @@ export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile 
     const handleCountdownComplete = useCallback(() => {
         if (!gameInitializedRef.current) {
             gameInitializedRef.current = true;
-            const tc = settings?.timeControl || '10+0';
+            const tc = formatTimeControl(settings?.timeControl);
             startGame({
                 botLevel: botInfo.name.toLowerCase(),
                 playerColor: playerColor,
