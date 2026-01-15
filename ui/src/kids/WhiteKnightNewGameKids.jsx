@@ -177,10 +177,22 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         border: 'none', borderRadius: '16px', color: 'white', fontWeight: '700',
                         fontSize: '12px', cursor: 'pointer', display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '6px'
                     }}>📚 LEARN BASICS</button>
-                    <button onClick={onClose} style={{
-                        width: '36px', height: '36px', background: 'rgba(255,255,255,0.1)',
-                        border: 'none', borderRadius: '10px', color: '#64748b', fontSize: '18px', cursor: 'pointer'
-                    }}>×</button>
+                    <button onClick={() => { console.log('Close clicked'); if (onClose) onClose(); else window.location.reload(); }} style={{
+                        width: '40px', height: '40px',
+                        background: 'rgba(255,255,255,0.15)',
+                        border: '2px solid rgba(255,255,255,0.2)',
+                        borderRadius: '50%',
+                        color: 'white',
+                        fontSize: '22px',
+                        fontWeight: '400',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                    }}>
+                        ×
+                    </button>
                 </div>
             </header>
 
@@ -332,10 +344,17 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                                         </div>
                                     </div>
                                     <button onClick={() => setIsChatOpen(false)} style={{
-                                        background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '10px',
-                                        width: '36px', height: '36px', color: 'white', cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: '20px', fontWeight: '700'
+                                        background: 'rgba(255,255,255,0.15)',
+                                        border: '2px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '50%',
+                                        width: '40px', height: '40px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '22px',
+                                        fontWeight: '400'
                                     }}>
                                         ×
                                     </button>
