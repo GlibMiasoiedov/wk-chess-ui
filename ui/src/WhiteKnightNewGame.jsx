@@ -372,7 +372,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         <LayoutGrid size={18} style={{ color: THEME.accent }} />
                     </div>
                     <span style={styles.headerTitle}>
-                        New Game v2.10
+                        New Game v2.24
                     </span>
                 </div>
 
