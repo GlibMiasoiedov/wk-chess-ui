@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import WhiteKnightNewGame from "./WhiteKnightNewGame";
 import WhiteKnightGamePlay from "./WhiteKnightGamePlay";
+import WhiteKnightGamePlayKids from "./kids/WhiteKnightGamePlayKids";
 import WhiteKnightAnalysis from "./WhiteKnightAnalysis";
 import WhiteKnightLearningHub from "./WhiteKnightLearningHub";
 
 function AppContent() {
+  const { isKidsMode } = useTheme();
   const [screen, setScreen] = useState('setup');
   const [gameSettings, setGameSettings] = useState({
     bot: null,
@@ -146,11 +148,19 @@ function AppContent() {
           />
         )}
         {screen === 'playing' && (
-          <WhiteKnightGamePlay
-            settings={gameSettings}
-            onGameEnd={handleGameEnd}
-            isMobile={isMobile}
-          />
+          isKidsMode ? (
+            <WhiteKnightGamePlayKids
+              settings={gameSettings}
+              onGameEnd={handleGameEnd}
+              isMobile={isMobile}
+            />
+          ) : (
+            <WhiteKnightGamePlay
+              settings={gameSettings}
+              onGameEnd={handleGameEnd}
+              isMobile={isMobile}
+            />
+          )
         )}
         {screen === 'analysis' && (
           <WhiteKnightAnalysis
