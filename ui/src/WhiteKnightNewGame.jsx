@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import DebugConsole from './components/DebugConsole.jsx';
 import WhiteKnightProfilePanel from './components/WhiteKnightProfilePanel.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
 
 // --- THEME CONSTANTS ---
 const THEME = {
@@ -372,8 +373,9 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, isMobi
                         <LayoutGrid size={18} style={{ color: THEME.accent }} />
                     </div>
                     <span style={styles.headerTitle}>
-                        New Game v2.24
+                        New Game v2.25
                     </span>
+                    <ThemeToggle />
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

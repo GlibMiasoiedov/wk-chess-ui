@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { ThemeProvider } from "./context/ThemeContext";
 import WhiteKnightNewGame from "./WhiteKnightNewGame";
 import WhiteKnightGamePlay from "./WhiteKnightGamePlay";
 import WhiteKnightAnalysis from "./WhiteKnightAnalysis";
 import WhiteKnightLearningHub from "./WhiteKnightLearningHub";
 
-export default function App() {
+function AppContent() {
   const [screen, setScreen] = useState('setup');
   const [gameSettings, setGameSettings] = useState({
     bot: null,
@@ -167,5 +168,14 @@ export default function App() {
         )}
       </div>
     </div>
+  );
+}
+
+// Wrap with ThemeProvider for global theme context
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
