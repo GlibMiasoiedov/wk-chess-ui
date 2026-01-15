@@ -295,71 +295,50 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
             setAnalysisStats(stats);
             setEstimatedRating(rating);
 
-            // Update session stats with performance-based rating
+            // Update session stats with FIDE Elo rating
             try {
                 const sessionStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 0, "lastRatingChange": 0}');
 
-                const myRating = sessionStats.rating;
+                // For players with 0 rating (unrated), start them at 1200 for calculation purposes
+                const myRating = sessionStats.rating === 0 ? 1200 : sessionStats.rating;
                 const botRating = sessionStats.pendingBotRating || 1200;
                 const outcome = sessionStats.pendingOutcome || 'draw';
                 const totalGames = sessionStats.games;
 
-                let newRating, finalRatingChange;
-
-                // PROVISIONAL RATING SYSTEM (first 5 games)
-                if (totalGames <= 5) {
-                    // For new players: Rating based on opponent rating ± 400
-                    if (outcome === 'win') {
-                        newRating = botRating + 400;
-                    } else if (outcome === 'draw') {
-                        newRating = botRating;
-                    } else { // loss
-                        newRating = botRating - 400;
-                    }
-
-                    // Apply performance modifier for provisional
-                    const performanceRatio = rating / Math.max(botRating, 400);
-                    if (performanceRatio > 1.15) {
-                        newRating = Math.round(newRating * 1.1); // +10% for excellent play
-                    } else if (performanceRatio < 0.85) {
-                        newRating = Math.round(newRating * 0.9); // -10% for poor play
-                    }
-
-                    // For games 2-5, blend with previous rating
-                    if (totalGames > 1 && myRating > 0) {
-                        newRating = Math.round((myRating * (totalGames - 1) + newRating) / totalGames);
-                    }
-
-                    finalRatingChange = newRating - myRating;
-
+                // FIDE K-Factor:
+                // K = 40 for new players (<30 games)
+                // K = 20 for players under 2400
+                // K = 10 for players 2400+
+                let K;
+                if (totalGames < 30) {
+                    K = 40;
+                } else if (myRating < 2400) {
+                    K = 20;
                 } else {
-                    // STANDARD ELO (6+ games)
-                    const K = totalGames < 30 ? 40 : 20;
-                    const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
-                    const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
-
-                    let calculatedChange = K * (actualScore - expectedScore);
-
-                    // Performance modifier
-                    const performanceRatio = rating / Math.max(myRating, 400);
-                    if (performanceRatio > 1.15) {
-                        calculatedChange *= 1.3;
-                    } else if (performanceRatio > 1.05) {
-                        calculatedChange *= 1.15;
-                    } else if (performanceRatio < 0.85) {
-                        calculatedChange *= 0.7;
-                    } else if (performanceRatio < 0.95) {
-                        calculatedChange *= 0.85;
-                    }
-
-                    finalRatingChange = Math.round(calculatedChange);
-                    newRating = myRating + finalRatingChange;
+                    K = 10;
                 }
 
-                // Clamp rating between 0 and 3000
+                // Actual score: Win = 1, Draw = 0.5, Loss = 0
+                const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
+
+                // Expected score (FIDE formula): E = 1 / (1 + 10^((Rb - Ra) / 400))
+                const expectedScore = 1 / (1 + Math.pow(10, (botRating - myRating) / 400));
+
+                // Rating change: ΔR = K × (S - E)
+                const finalRatingChange = Math.round(K * (actualScore - expectedScore));
+
+                // New rating
+                let newRating = myRating + finalRatingChange;
+
+                // For first game: if player was 0, set to the new calculated rating
+                if (sessionStats.rating === 0) {
+                    newRating = 1200 + finalRatingChange;
+                }
+
+                // Clamp rating (FIDE floor is 1400, but we'll use 0 for our app)
                 sessionStats.rating = Math.max(0, Math.min(3000, newRating));
                 sessionStats.lastRatingChange = finalRatingChange;
-                sessionStats.lastPerformanceRating = rating;
+                sessionStats.lastPerformanceRating = rating; // Keep performance rating for display
 
                 // Update UI state for rating change display
                 setRatingChange(finalRatingChange);
@@ -369,7 +348,7 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                 delete sessionStats.pendingBotRating;
 
                 localStorage.setItem('wk_session_stats', JSON.stringify(sessionStats));
-                console.log(`[Analysis] Rating updated: ${myRating} → ${sessionStats.rating} (${finalRatingChange >= 0 ? '+' : ''}${finalRatingChange}), Performance: ${rating}, Games: ${totalGames}`);
+                console.log(`[Analysis] FIDE Elo: ${myRating} vs Bot ${botRating}, Score: ${actualScore}, Expected: ${expectedScore.toFixed(3)}, K=${K}, Change: ${finalRatingChange >= 0 ? '+' : ''}${finalRatingChange}, New: ${sessionStats.rating}`);
             } catch (e) {
                 console.error('[Analysis] Error updating session rating:', e);
             }
