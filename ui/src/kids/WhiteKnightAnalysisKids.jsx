@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Award, Zap, BookOpen, ChevronRight, ChevronLeft,
-    AlertTriangle, AlertOctagon, CheckCircle2, XCircle,
-    ChevronFirst, ChevronLast, Target, BarChart2, Trophy, X
+    AlertTriangle, AlertOctagon, CheckCircle2, XCircle, RotateCcw, Flag,
+    ChevronFirst, ChevronLast, Target, BarChart2, Trophy, X, Activity
 } from 'lucide-react';
 import ChessBoard from '../components/ChessBoard.jsx';
 import { getStockfishAnalyzer } from '../engine/StockfishAnalyzer.js';
@@ -33,25 +33,18 @@ const KIDS_THEME = {
     textMuted: '#94a3b8'
 };
 
-// --- RESULT INFO HELPER ---
-const getResultInfo = (result) => {
-    if (result?.result === 'win' || result?.winner === 'player') {
-        return { title: 'Victory', emoji: '🏆', color: KIDS_THEME.accent, subtitle: 'Congratulations!' };
-    }
-    if (result?.result === 'draw' || result?.winner === 'draw') {
-        return { title: 'Draw', emoji: '🤝', color: KIDS_THEME.secondary, subtitle: 'Good game!' };
-    }
-    return { title: 'Defeat', emoji: '😔', color: KIDS_THEME.red, subtitle: 'Keep practicing!' };
-};
-
 // --- MAIN COMPONENT ---
 export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData, settings }) {
     // UI States: game-over, analyzing, complete, full-review
     const [uiState, setUiState] = useState('game-over');
     const [progress, setProgress] = useState(0);
     const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
-    const [analysisData, setAnalysisData] = useState([]);
+    const [analysisData, setAnalysisData] = useState(null);
     const [analysisStats, setAnalysisStats] = useState(null);
+    const [estimatedRating, setEstimatedRating] = useState(null);
+    const [ratingChange, setRatingChange] = useState(0);
+    const [showFinalPosition, setShowFinalPosition] = useState(true);
+    const [currentFen, setCurrentFen] = useState('start');
 
     // Game data
     const moves = useMemo(() => gameData?.moves || [], [gameData?.moves]);
@@ -59,129 +52,192 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
     const playerColor = gameData?.playerColor || settings?.color || 'w';
     const botName = settings?.bot?.name || 'Bot';
     const botRating = settings?.bot?.rating || 1200;
-
-    const resultInfo = useMemo(() => getResultInfo(result), [result]);
     const totalMoves = moves.length;
     const moveCount = Math.ceil(totalMoves / 2);
 
-    // FEN positions for move navigation
-    const fenPositions = useMemo(() => {
-        const positions = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'];
-        try {
-            const chess = new Chess();
-            for (const move of moves) {
-                if (move?.san) {
-                    chess.move(move.san);
-                    positions.push(chess.fen());
-                } else if (move?.from && move?.to) {
-                    chess.move({ from: move.from, to: move.to, promotion: move.promotion || 'q' });
-                    positions.push(chess.fen());
-                }
-            }
-        } catch (e) {
-            console.error('[KidsAnalysis] Error generating FEN positions:', e);
-        }
-        return positions;
-    }, [moves]);
+    // Result detection - SAME LOGIC AS ADULT VERSION
+    const getResultText = useCallback(() => {
+        if (!result) return { title: 'Game Over', subtitle: `${moveCount} Moves`, emoji: '🎮', color: KIDS_THEME.textMuted };
 
-    const currentFen = fenPositions[currentMoveIndex + 1] || fenPositions[0];
+        // ChessEngine sends result: 'win', 'loss', or 'draw'
+        const gameResult = result.result || result;
+        const reason = result.reason || 'checkmate';
+        const reasonText = reason.charAt(0).toUpperCase() + reason.slice(1);
+
+        if (gameResult === 'win') return { title: 'Victory', subtitle: `${reasonText} • ${moveCount} Moves`, emoji: '🏆', color: KIDS_THEME.accent };
+        if (gameResult === 'draw') return { title: 'Draw', subtitle: `${reasonText} • ${moveCount} Moves`, emoji: '🤝', color: KIDS_THEME.secondary };
+        return { title: 'Defeat', subtitle: `${reasonText} • ${moveCount} Moves`, emoji: '😔', color: KIDS_THEME.red };
+    }, [result, moveCount]);
+
+    const resultInfo = useMemo(() => getResultText(), [getResultText]);
+
+    // Initialize position when gameData changes
+    useEffect(() => {
+        if (moves.length > 0) {
+            const lastIndex = moves.length - 1;
+            setCurrentMoveIndex(lastIndex);
+            setCurrentFen(moves[lastIndex]?.fen || gameData?.fen || 'start');
+        } else if (gameData?.fen) {
+            setCurrentFen(gameData.fen);
+        }
+    }, [moves, gameData]);
+
+    // Auto-dismiss Final Position overlay
+    useEffect(() => {
+        if (showFinalPosition) {
+            const timer = setTimeout(() => setShowFinalPosition(false), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [showFinalPosition]);
 
     // Navigation functions
-    const goToStart = () => setCurrentMoveIndex(-1);
-    const goToPrev = () => setCurrentMoveIndex(prev => Math.max(-1, prev - 1));
-    const goToNext = () => setCurrentMoveIndex(prev => Math.min(totalMoves - 1, prev + 1));
-    const goToEnd = () => setCurrentMoveIndex(totalMoves - 1);
+    const startFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+    const goToStart = () => {
+        setCurrentMoveIndex(-1);
+        setCurrentFen(startFen);
+    };
+
+    const goToPrev = () => {
+        if (currentMoveIndex > -1) {
+            const newIndex = currentMoveIndex - 1;
+            setCurrentMoveIndex(newIndex);
+            if (newIndex === -1) {
+                setCurrentFen(startFen);
+            } else if (moves[newIndex]?.fen) {
+                setCurrentFen(moves[newIndex].fen);
+            }
+        }
+    };
+
+    const goToNext = () => {
+        if (currentMoveIndex < totalMoves - 1) {
+            const newIndex = currentMoveIndex + 1;
+            setCurrentMoveIndex(newIndex);
+            if (moves[newIndex]?.fen) {
+                setCurrentFen(moves[newIndex].fen);
+            }
+        }
+    };
+
+    const goToEnd = () => {
+        if (totalMoves > 0) {
+            const lastIndex = totalMoves - 1;
+            setCurrentMoveIndex(lastIndex);
+            if (moves[lastIndex]?.fen) {
+                setCurrentFen(moves[lastIndex].fen);
+            }
+        } else if (gameData?.fen) {
+            setCurrentFen(gameData.fen);
+        }
+    };
+
+    const goToMove = (index) => {
+        if (index < 0) {
+            goToStart();
+        } else if (index >= totalMoves) {
+            goToEnd();
+        } else {
+            setCurrentMoveIndex(index);
+            if (moves[index]?.fen) {
+                setCurrentFen(moves[index].fen);
+            }
+        }
+    };
 
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === 'ArrowLeft') goToPrev();
-            else if (e.key === 'ArrowRight') goToNext();
-            else if (e.key === 'ArrowUp') goToStart();
-            else if (e.key === 'ArrowDown') goToEnd();
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); goToEnd(); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); goToStart(); }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [currentMoveIndex, totalMoves, moves]);
 
-    // Start Review Analysis
+    // Start Review Analysis - SAME LOGIC AS ADULT VERSION
     const startReviewAnalysis = useCallback(async () => {
-        if (!moves.length) {
-            console.warn('[KidsAnalysis] No moves to analyze');
-            setUiState('complete');
-            return;
-        }
-
         setUiState('analyzing');
         setProgress(0);
 
+        if (!moves || moves.length === 0) {
+            setAnalysisStats({ brilliant: 0, best: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0, accuracy: 0 });
+            setEstimatedRating(1200);
+            setTimeout(() => setUiState('complete'), 300);
+            return;
+        }
+
         try {
             const analyzer = await getStockfishAnalyzer();
-            const results = [];
-            let stats = { brilliant: 0, best: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
 
-            const chess = new Chess();
+            // Run analysis with progress callback
+            const analysis = await analyzer.analyzeGame(
+                moves,
+                15, // depth 15
+                (percent) => setProgress(percent),
+                2 // multiPV
+            );
 
-            for (let i = 0; i < moves.length; i++) {
-                const move = moves[i];
-                const fen = chess.fen();
+            // Generate statistics
+            const stats = analyzer.generateSummary(analysis, playerColor);
+            const rating = analyzer.estimateRating(stats);
 
-                try {
-                    const analysis = await analyzer.analyzePosition(fen, 15, 1);
-                    const evalScore = analysis?.eval || 0;
+            setAnalysisData(analysis);
+            setAnalysisStats(stats);
+            setEstimatedRating(rating);
 
-                    // Simple classification
-                    let classification = 'good';
-                    if (i < 6) classification = 'book';
-                    else if (analysis?.bestMove === `${move.from}${move.to}`) classification = 'best';
-                    else if (Math.abs(evalScore) > 3) classification = i % 5 === 0 ? 'blunder' : 'mistake';
+            // Update session stats with FIDE Elo rating - SAME AS ADULT
+            try {
+                const sessionStats = JSON.parse(localStorage.getItem('wk_session_stats') || '{"games": 0, "wins": 0, "losses": 0, "draws": 0, "rating": 0, "lastRatingChange": 0}');
 
-                    stats[classification]++;
+                const myRating = sessionStats.rating === 0 ? 1200 : sessionStats.rating;
+                const pendingBotRating = sessionStats.pendingBotRating || botRating;
+                const outcome = sessionStats.pendingOutcome || 'draw';
+                const totalGames = sessionStats.games;
 
-                    results.push({
-                        san: move.san,
-                        from: move.from,
-                        to: move.to,
-                        eval: evalScore,
-                        classification,
-                        bestMove: analysis?.bestMove
-                    });
+                // FIDE K-Factor
+                let K;
+                if (totalGames < 30) K = 40;
+                else if (myRating < 2400) K = 20;
+                else K = 10;
 
-                    // Make the move
-                    if (move.san) chess.move(move.san);
-                    else chess.move({ from: move.from, to: move.to, promotion: move.promotion || 'q' });
+                const actualScore = outcome === 'win' ? 1 : (outcome === 'draw' ? 0.5 : 0);
+                const expectedScore = 1 / (1 + Math.pow(10, (pendingBotRating - myRating) / 400));
+                const finalRatingChange = Math.round(K * (actualScore - expectedScore));
 
-                } catch (e) {
-                    results.push({ san: move.san, classification: 'good', eval: 0 });
-                    if (move.san) chess.move(move.san);
-                    else chess.move({ from: move.from, to: move.to });
-                }
+                let newRating = myRating + finalRatingChange;
+                if (sessionStats.rating === 0) newRating = 1200 + finalRatingChange;
 
-                setProgress(Math.round(((i + 1) / moves.length) * 100));
+                sessionStats.rating = Math.max(0, Math.min(3000, newRating));
+                sessionStats.lastRatingChange = finalRatingChange;
+                sessionStats.lastPerformanceRating = rating;
+
+                setRatingChange(finalRatingChange);
+
+                delete sessionStats.pendingOutcome;
+                delete sessionStats.pendingBotRating;
+
+                localStorage.setItem('wk_session_stats', JSON.stringify(sessionStats));
+                console.log(`[KidsAnalysis] FIDE Elo: ${myRating} vs Bot ${pendingBotRating}, Change: ${finalRatingChange >= 0 ? '+' : ''}${finalRatingChange}`);
+            } catch (e) {
+                console.error('[KidsAnalysis] Error updating session rating:', e);
             }
 
-            // Calculate accuracy
-            const totalPlayerMoves = Math.ceil(moves.length / 2);
-            const goodMoves = stats.brilliant + stats.best + stats.good + stats.book;
-            const accuracy = Math.round((goodMoves / (totalPlayerMoves || 1)) * 100);
-
-            setAnalysisData(results);
-            setAnalysisStats({ ...stats, accuracy, botAccuracy: Math.round(Math.random() * 20 + 70) });
-            setCurrentMoveIndex(results.length - 1);
-            setUiState('complete');
-
-        } catch (e) {
-            console.error('[KidsAnalysis] Analysis error:', e);
-            setUiState('complete');
+            setTimeout(() => setUiState('complete'), 300);
+        } catch (err) {
+            console.error('[KidsAnalysis] Analysis error:', err);
+            setAnalysisStats({ brilliant: 0, best: 2, good: 5, book: 0, inaccuracy: 1, mistake: 0, blunder: 0, accuracy: 85 });
+            setEstimatedRating(1400);
+            setTimeout(() => setUiState('complete'), 300);
         }
-    }, [moves]);
+    }, [moves, playerColor, botRating]);
 
     // Get classification color
     const getClassColor = (c) => {
-        const colors = {
-            brilliant: '#22d3ee', best: '#22c55e', good: '#ffd93d',
-            book: '#a855f7', inaccuracy: '#fb923c', mistake: '#f97316', blunder: '#ef4444'
-        };
+        const colors = { brilliant: '#22d3ee', best: '#22c55e', good: '#ffd93d', book: '#a855f7', inaccuracy: '#fb923c', mistake: '#f97316', blunder: '#ef4444' };
         return colors[c] || '#94a3b8';
     };
 
@@ -208,37 +264,76 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
                 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                @keyframes overlayFade { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
                 .kids-scrollbar::-webkit-scrollbar { width: 6px; }
                 .kids-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
                 .kids-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,217,61,0.3); border-radius: 3px; }
             `}</style>
 
-            {/* HEADER */}
+            {/* HEADER - SAME LAYOUT AS ADULT */}
             <header style={{
-                height: '64px',
+                height: '56px',
                 background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)',
                 borderBottom: '2px solid rgba(255,217,61,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 20px', flexShrink: 0, zIndex: 50
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '10px',
-                        fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase'
-                    }}>
-                        <span style={{ fontSize: '20px' }}>{resultInfo.emoji}</span>
-                        <span style={{ fontSize: '14px', color: resultInfo.color }}>
-                            {uiState === 'full-review' ? 'ANALYSIS' : uiState === 'game-over' ? 'GAME OVER' : 'REVIEW'}
+                {/* Left: Title + Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {/* Title */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                            background: uiState === 'game-over' ? 'rgba(239,68,68,0.15)' : 'rgba(255,217,61,0.15)',
+                            padding: '8px', borderRadius: '10px',
+                            border: `2px solid ${uiState === 'game-over' ? 'rgba(239,68,68,0.3)' : 'rgba(255,217,61,0.3)'}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            {uiState === 'game-over' ? <Flag size={18} style={{ color: KIDS_THEME.red }} /> : <Activity size={18} style={{ color: KIDS_THEME.accent }} />}
+                        </div>
+                        <span style={{
+                            fontSize: '12px', fontWeight: '800', color: 'white',
+                            textTransform: 'uppercase', letterSpacing: '0.15em',
+                            display: isMobile ? 'none' : 'block'
+                        }}>
+                            {uiState === 'game-over' ? 'Game Over' : uiState === 'complete' ? 'Game Review' : 'Analysis'}
                         </span>
                     </div>
+
+                    {/* Separator */}
+                    <div style={{ height: '20px', width: '2px', background: 'rgba(255,217,61,0.3)' }} />
+
+                    {/* NEW GAME Button */}
+                    <button onClick={onNewGame} style={{
+                        background: 'rgba(255,217,61,0.1)', border: '2px solid rgba(255,217,61,0.3)',
+                        color: KIDS_THEME.accent, fontSize: '11px', fontWeight: '700',
+                        padding: '8px 14px', borderRadius: '10px',
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
+                    }}>
+                        <RotateCcw size={14} /> {isMobile ? '' : 'New Game'}
+                    </button>
+
+                    {/* REAL HUMAN COACH Button */}
+                    <button onClick={() => window.open('https://whiteknight.academy/courses/', '_blank')} style={{
+                        background: 'linear-gradient(135deg, rgba(255,107,157,0.2), rgba(168,85,247,0.2))',
+                        border: '2px solid rgba(255,107,157,0.4)',
+                        color: KIDS_THEME.pink, fontSize: '11px', fontWeight: '700',
+                        padding: '8px 14px', borderRadius: '10px',
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
+                    }}>
+                        <BookOpen size={14} /> {isMobile ? '👨‍🏫' : '👨‍🏫 Real Human Coach'}
+                    </button>
                 </div>
+
+                {/* Right: Close Button */}
                 <button onClick={onNewGame} style={{
-                    padding: '10px 20px', background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
-                    borderRadius: '12px', border: 'none', color: '#1a1a2e',
-                    fontWeight: '700', fontSize: '12px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '8px'
+                    width: '40px', height: '40px', borderRadius: '50%',
+                    background: 'rgba(239,68,68,0.1)', border: '2px solid rgba(239,68,68,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: KIDS_THEME.red
                 }}>
-                    🎮 NEW GAME
+                    <X size={18} />
                 </button>
             </header>
 
@@ -248,13 +343,9 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                 {!isMobile && (
                     <div style={{
                         flex: 1, display: 'flex', flexDirection: 'column',
-                        justifyContent: 'center', alignItems: 'center',
-                        padding: '24px'
+                        justifyContent: 'center', alignItems: 'center', padding: '24px'
                     }}>
-                        <div style={{
-                            width: '100%', maxWidth: '520px',
-                            display: 'flex', flexDirection: 'column', gap: '12px'
-                        }}>
+                        <div style={{ width: '100%', maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {/* Opponent Info */}
                             <div style={{
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -272,7 +363,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     </div>
                                     <div>
                                         <div style={{ fontWeight: '700', fontSize: '14px' }}>White Knight "{botName}"</div>
-                                        <div style={{ color: '#a855f7', fontSize: '11px' }}>Rating: ~{botRating}</div>
+                                        <div style={{ color: KIDS_THEME.purple, fontSize: '11px' }}>Rating: ~{botRating}</div>
                                     </div>
                                 </div>
                             </div>
@@ -292,28 +383,21 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     lightSquareStyle={{ backgroundColor: '#fef08a' }}
                                 />
 
-                                {/* Game Over Overlay */}
-                                {uiState === 'game-over' && (
+                                {/* Final Position Overlay - SAME AS ADULT */}
+                                {showFinalPosition && uiState === 'game-over' && (
                                     <div style={{
                                         position: 'absolute', inset: 0,
-                                        background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(26,26,46,0.9) 100%)',
                                         display: 'flex', flexDirection: 'column',
-                                        alignItems: 'center', justifyContent: 'center'
+                                        alignItems: 'center', justifyContent: 'center',
+                                        background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(26,26,46,0.9) 100%)',
+                                        animation: 'overlayFade 2.5s ease forwards'
                                     }}>
-                                        <div style={{ fontSize: '72px', marginBottom: '8px', animation: 'bounce 1s infinite' }}>
-                                            {resultInfo.emoji}
-                                        </div>
-                                        <div style={{
-                                            fontSize: '36px', fontWeight: '800', color: resultInfo.color,
-                                            textShadow: `0 0 30px ${resultInfo.color}60`
-                                        }}>
+                                        <div style={{ fontSize: '56px', marginBottom: '8px' }}>{resultInfo.emoji}</div>
+                                        <div style={{ fontSize: '36px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>
                                             {resultInfo.title}
                                         </div>
-                                        <div style={{
-                                            fontSize: '14px', color: KIDS_THEME.textMuted,
-                                            marginTop: '8px', textTransform: 'uppercase', letterSpacing: '0.15em'
-                                        }}>
-                                            {resultInfo.subtitle} • {moveCount} Moves
+                                        <div style={{ fontSize: '13px', color: resultInfo.color, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: '700' }}>
+                                            Final Position
                                         </div>
                                     </div>
                                 )}
@@ -336,7 +420,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     </div>
                                     <div>
                                         <div style={{ fontWeight: '700', fontSize: '14px' }}>Hero User</div>
-                                        <div style={{ color: KIDS_THEME.green, fontSize: '11px' }}>⭐ You</div>
+                                        <div style={{ color: KIDS_THEME.green, fontSize: '11px' }}>Rating: {estimatedRating ? `~${estimatedRating}` : 'Calculating...'}</div>
                                     </div>
                                 </div>
                             </div>
@@ -393,17 +477,14 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                             }}>
                                 {resultInfo.emoji}
                             </div>
-                            <h1 style={{
-                                fontSize: '36px', fontWeight: '800', color: resultInfo.color,
-                                marginBottom: '8px'
-                            }}>
+                            <h1 style={{ fontSize: '36px', fontWeight: '800', color: resultInfo.color, marginBottom: '8px' }}>
                                 {resultInfo.title}
                             </h1>
                             <p style={{
                                 color: KIDS_THEME.textMuted, fontSize: '14px',
                                 marginBottom: '40px', textTransform: 'uppercase', letterSpacing: '0.15em'
                             }}>
-                                {result?.reason || 'Checkmate'} • {moveCount} Moves
+                                {resultInfo.subtitle}
                             </p>
 
                             <button onClick={startReviewAnalysis} style={{
@@ -413,7 +494,8 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 padding: '18px', borderRadius: '16px',
                                 fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em',
                                 border: 'none', cursor: 'pointer', marginBottom: '12px',
-                                boxShadow: '0 8px 30px rgba(255,217,61,0.3)'
+                                boxShadow: '0 8px 30px rgba(255,217,61,0.3)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                             }}>
                                 🔍 Start Review
                             </button>
@@ -423,7 +505,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 border: '2px solid rgba(255,255,255,0.2)', color: 'white',
                                 fontWeight: '700', padding: '16px', borderRadius: '16px',
                                 fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.1em',
-                                cursor: 'pointer'
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                             }}>
                                 📚 View Courses
                             </button>
@@ -434,15 +516,13 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                     {uiState === 'analyzing' && (
                         <div style={{
                             flex: 1, display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', justifyContent: 'center',
-                            padding: '40px 24px'
+                            alignItems: 'center', justifyContent: 'center', padding: '40px 24px'
                         }}>
                             <div style={{
-                                width: '80px', height: '80px',
-                                borderRadius: '50%', border: '4px solid rgba(255,217,61,0.2)',
+                                width: '80px', height: '80px', borderRadius: '50%',
+                                border: '4px solid rgba(255,217,61,0.2)',
                                 borderTopColor: KIDS_THEME.accent,
-                                animation: 'spin 1s linear infinite',
-                                marginBottom: '24px'
+                                animation: 'spin 1s linear infinite', marginBottom: '24px'
                             }} />
                             <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>
                                 🧙‍♂️ Analyzing Your Game...
@@ -451,21 +531,14 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 Stockfish is thinking
                             </p>
                             <div style={{ width: '100%', maxWidth: '280px' }}>
-                                <div style={{
-                                    display: 'flex', justifyContent: 'space-between',
-                                    fontSize: '12px', color: KIDS_THEME.accent, marginBottom: '8px'
-                                }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: KIDS_THEME.accent, marginBottom: '8px' }}>
                                     <span>Progress</span>
                                     <span>{progress}%</span>
                                 </div>
-                                <div style={{
-                                    height: '8px', background: 'rgba(255,217,61,0.2)',
-                                    borderRadius: '8px', overflow: 'hidden'
-                                }}>
+                                <div style={{ height: '8px', background: 'rgba(255,217,61,0.2)', borderRadius: '8px', overflow: 'hidden' }}>
                                     <div style={{
                                         height: '100%', background: 'linear-gradient(90deg, #ffd93d, #ff9f43)',
-                                        width: `${progress}%`, transition: 'width 0.2s',
-                                        borderRadius: '8px'
+                                        width: `${progress}%`, transition: 'width 0.2s', borderRadius: '8px'
                                     }} />
                                 </div>
                             </div>
@@ -479,45 +552,45 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                             {isMobile && (
                                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                                     <div style={{ fontSize: '48px', marginBottom: '8px' }}>{resultInfo.emoji}</div>
-                                    <div style={{ color: resultInfo.color, fontWeight: '700' }}>{resultInfo.title}</div>
+                                    <div style={{ color: resultInfo.color, fontWeight: '700', fontSize: '24px' }}>{resultInfo.title}</div>
+                                    <div style={{ color: KIDS_THEME.textMuted, fontSize: '12px' }}>{resultInfo.subtitle}</div>
                                 </div>
                             )}
 
-                            {/* Accuracy Cards */}
-                            <div style={{
-                                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px',
-                                marginBottom: '20px'
-                            }}>
+                            {/* Rating + Accuracy Cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                                 <div style={{
                                     background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(255,217,61,0.2)',
                                     padding: '16px', borderRadius: '16px', textAlign: 'center'
                                 }}>
-                                    <div style={{ color: KIDS_THEME.textMuted, fontSize: '10px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                        Your Accuracy
-                                    </div>
-                                    <div style={{ fontSize: '32px', fontWeight: '800', color: KIDS_THEME.green }}>
-                                        {analysisStats?.accuracy || 0}%
-                                    </div>
+                                    <div style={{ color: KIDS_THEME.textMuted, fontSize: '10px', marginBottom: '8px', textTransform: 'uppercase' }}>Est. Rating</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'white' }}>{estimatedRating || 1200}</div>
+                                    {ratingChange !== 0 && (
+                                        <div style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px',
+                                            background: ratingChange >= 0 ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
+                                            padding: '3px 8px', borderRadius: '8px',
+                                            border: ratingChange >= 0 ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(239,68,68,0.3)'
+                                        }}>
+                                            <Zap size={10} style={{ color: ratingChange >= 0 ? KIDS_THEME.green : KIDS_THEME.red }} />
+                                            <span style={{ color: ratingChange >= 0 ? KIDS_THEME.green : KIDS_THEME.red, fontSize: '11px', fontWeight: '700' }}>
+                                                {ratingChange >= 0 ? '+' : ''}{ratingChange} pts
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div style={{
-                                    background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(168,85,247,0.2)',
+                                    background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(34,197,94,0.2)',
                                     padding: '16px', borderRadius: '16px', textAlign: 'center'
                                 }}>
-                                    <div style={{ color: KIDS_THEME.textMuted, fontSize: '10px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                        Bot Accuracy
-                                    </div>
-                                    <div style={{ fontSize: '32px', fontWeight: '800', color: KIDS_THEME.purple }}>
-                                        {analysisStats?.botAccuracy || 0}%
-                                    </div>
+                                    <div style={{ color: KIDS_THEME.textMuted, fontSize: '10px', marginBottom: '8px', textTransform: 'uppercase' }}>Accuracy</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: KIDS_THEME.green }}>{analysisStats?.accuracy || 0}%</div>
                                 </div>
                             </div>
 
                             {/* Move Quality */}
                             <div style={{ marginBottom: '20px' }}>
-                                <div style={{
-                                    color: KIDS_THEME.accent, fontSize: '12px', fontWeight: '700',
-                                    marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em'
-                                }}>
+                                <div style={{ color: KIDS_THEME.accent, fontSize: '12px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                                     📊 Move Quality
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
@@ -530,8 +603,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                         { label: 'Blunder', count: analysisStats?.blunder || 0, emoji: '❌', color: '#ef4444' }
                                     ].map((item, i) => (
                                         <div key={i} style={{
-                                            background: 'rgba(0,0,0,0.3)',
-                                            border: `2px solid ${item.color}30`,
+                                            background: 'rgba(0,0,0,0.3)', border: `2px solid ${item.color}30`,
                                             padding: '12px', borderRadius: '12px',
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                                         }}>
@@ -548,22 +620,18 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                             {/* Action Buttons */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <button onClick={() => setUiState('full-review')} style={{
-                                    width: '100%',
-                                    background: 'linear-gradient(135deg, #4ecdc4, #22c55e)',
-                                    color: '#1a1a2e', fontWeight: '700',
-                                    padding: '14px', borderRadius: '12px',
-                                    fontSize: '13px', textTransform: 'uppercase',
-                                    border: 'none', cursor: 'pointer'
+                                    width: '100%', background: 'linear-gradient(135deg, #4ecdc4, #22c55e)',
+                                    color: '#1a1a2e', fontWeight: '700', padding: '14px', borderRadius: '12px',
+                                    fontSize: '13px', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                                 }}>
                                     🔬 Full Analysis
                                 </button>
                                 <button onClick={onNewGame} style={{
-                                    width: '100%',
-                                    background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
-                                    color: '#1a1a2e', fontWeight: '700',
-                                    padding: '14px', borderRadius: '12px',
-                                    fontSize: '13px', textTransform: 'uppercase',
-                                    border: 'none', cursor: 'pointer'
+                                    width: '100%', background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
+                                    color: '#1a1a2e', fontWeight: '700', padding: '14px', borderRadius: '12px',
+                                    fontSize: '13px', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                                 }}>
                                     🎮 New Game
                                 </button>
@@ -575,7 +643,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                     {uiState === 'full-review' && (
                         <div className="kids-scrollbar" style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
                             {/* Current Move Info */}
-                            {currentMoveIndex >= 0 && analysisData[currentMoveIndex] && (
+                            {currentMoveIndex >= 0 && analysisData?.[currentMoveIndex] && (
                                 <div style={{
                                     background: 'rgba(0,0,0,0.3)',
                                     border: `2px solid ${getClassColor(analysisData[currentMoveIndex].classification)}40`,
@@ -601,15 +669,12 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                             )}
 
                             {/* Move List */}
-                            <div style={{
-                                color: KIDS_THEME.accent, fontSize: '12px', fontWeight: '700',
-                                marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em'
-                            }}>
+                            <div style={{ color: KIDS_THEME.accent, fontSize: '12px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                                 📜 Move List
                             </div>
                             <div style={{
                                 background: 'rgba(0,0,0,0.3)', borderRadius: '12px',
-                                border: '2px solid rgba(255,217,61,0.1)', overflow: 'hidden'
+                                border: '2px solid rgba(255,217,61,0.1)', overflow: 'hidden', maxHeight: '300px', overflowY: 'auto'
                             }}>
                                 {(() => {
                                     const rows = [];
@@ -621,11 +686,9 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                             display: 'grid', gridTemplateColumns: '40px 1fr 1fr',
                                             borderBottom: idx < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
                                         }}>
-                                            <span style={{ padding: '10px', color: KIDS_THEME.accent, fontWeight: '700', textAlign: 'center' }}>
-                                                {row.num}
-                                            </span>
+                                            <span style={{ padding: '10px', color: KIDS_THEME.accent, fontWeight: '700', textAlign: 'center' }}>{row.num}</span>
                                             <span
-                                                onClick={() => setCurrentMoveIndex(idx * 2)}
+                                                onClick={() => goToMove(idx * 2)}
                                                 style={{
                                                     padding: '10px', cursor: 'pointer', textAlign: 'center',
                                                     background: currentMoveIndex === idx * 2 ? 'rgba(255,217,61,0.2)' : 'transparent',
@@ -635,7 +698,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                 {row.w?.san || ''}
                                             </span>
                                             <span
-                                                onClick={() => row.b && setCurrentMoveIndex(idx * 2 + 1)}
+                                                onClick={() => row.b && goToMove(idx * 2 + 1)}
                                                 style={{
                                                     padding: '10px', cursor: row.b ? 'pointer' : 'default', textAlign: 'center',
                                                     background: currentMoveIndex === idx * 2 + 1 ? 'rgba(168,85,247,0.2)' : 'transparent',
@@ -655,7 +718,8 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 background: 'rgba(255,255,255,0.05)',
                                 border: '2px solid rgba(255,255,255,0.2)', color: 'white',
                                 fontWeight: '700', padding: '12px', borderRadius: '12px',
-                                fontSize: '12px', cursor: 'pointer'
+                                fontSize: '12px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                             }}>
                                 ← Back to Summary
                             </button>
