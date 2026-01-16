@@ -192,7 +192,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
                     }}>♞</div>
                     <span style={{ fontWeight: '800', fontSize: '14px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>NEW GAME</span>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.28</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.42</span>
                     <ThemeToggle />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
