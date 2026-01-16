@@ -215,7 +215,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
                     }}>♞</div>
                     <span style={{ fontWeight: '800', fontSize: '14px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>NEW GAME</span>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.46</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.47</span>
                     <ThemeToggle />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -553,7 +553,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         }}>
                             <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>DIFF</div>
                             <div style={{ color: selectedBot.color, fontSize: '16px', fontWeight: '700' }}>
-                                {selectedBot.emoji} {selectedBot.name}
+                                <span key={`diff-${selectedBotIndex}`}>{selectedBot.emoji}</span> {selectedBot.name}
                             </div>
                         </button>
                     </div>
@@ -721,7 +721,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         <div>
                             <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em' }}>✨ PLAY AS (SELECTED: {selectedSide})</div>
                             <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', overflow: 'hidden' }}>
-                                {[{ v: 'WHITE', e: '⬜' }, { v: 'RANDOM', e: '🎲' }, { v: 'BLACK', e: '⬛' }].map(s => (
+                                {[{ v: 'WHITE', e: '♔' }, { v: 'RANDOM', e: '🎲' }, { v: 'BLACK', e: '♚' }].map(s => (
                                     <button key={s.v} onClick={() => setSelectedSide(s.v)} style={{
                                         flex: 1, padding: '14px', border: 'none',
                                         background: selectedSide === s.v ? '#4ecdc4' : 'transparent',
