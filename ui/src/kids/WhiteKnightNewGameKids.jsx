@@ -272,18 +272,22 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                             <div style={{
                                 background: 'linear-gradient(135deg, rgba(78,205,196,0.15), rgba(34,197,94,0.1))',
                                 borderRadius: '14px', padding: '16px', border: '2px solid rgba(78,205,196,0.2)',
-                                position: 'relative', overflow: 'hidden', minWidth: '200px'
+                                position: 'relative'
                             }}>
                                 <div style={{ fontSize: '11px', color: '#4ecdc4', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                                     📅 UPCOMING LIVE SESSIONS
                                 </div>
-                                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ background: '#ffd93d', borderRadius: '10px', padding: '8px 14px', textAlign: 'center', color: '#1a1a2e' }}>
+                                <div style={{
+                                    background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '12px',
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    flexWrap: 'wrap'
+                                }}>
+                                    <div style={{ background: '#ffd93d', borderRadius: '10px', padding: '8px 14px', textAlign: 'center', color: '#1a1a2e', flexShrink: 0 }}>
                                         <div style={{ fontSize: '9px', fontWeight: '700' }}>JAN</div>
                                         <div style={{ fontSize: '20px', fontWeight: '800' }}>17</div>
                                     </div>
-                                    <div>
-                                        <div style={{ fontWeight: '700', fontSize: '13px' }}>ADVANCED ENDGAMES</div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: '700', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>ADVANCED ENDGAMES</div>
                                         <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>👩‍🏫 Real Human Coach</div>
                                     </div>
                                 </div>
