@@ -328,12 +328,14 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
 
                 {/* Right: Close Button */}
                 <button onClick={onNewGame} style={{
-                    width: '40px', height: '40px', borderRadius: '50%',
+                    minWidth: '40px', maxWidth: '40px', width: '40px',
+                    minHeight: '40px', maxHeight: '40px', height: '40px',
+                    borderRadius: '50%', flexShrink: 0,
                     background: 'rgba(239,68,68,0.1)', border: '2px solid rgba(239,68,68,0.3)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', color: KIDS_THEME.red
+                    cursor: 'pointer', color: KIDS_THEME.red, padding: 0
                 }}>
-                    <X size={18} />
+                    <X size={18} strokeWidth={2.5} />
                 </button>
             </header>
 

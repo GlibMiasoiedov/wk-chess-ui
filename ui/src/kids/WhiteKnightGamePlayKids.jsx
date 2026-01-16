@@ -225,10 +225,18 @@ export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile 
     useEffect(() => {
         if ((gameState?.isGameOver || gameState?.gameOver) && !hasGameEndedRef.current) {
             hasGameEndedRef.current = true;
-            const result = gameState?.result || gameState?.gameResult || 'unknown';
-            setTimeout(() => onGameEnd?.(result, gameState?.moves || []), 500);
+            // gameState.gameOver contains { result: 'win'/'loss'/'draw', reason: 'checkmate'/... }
+            const gameOverData = gameState?.gameOver || { result: 'unknown', reason: 'unknown' };
+            const resultObject = {
+                result: gameOverData,
+                moves: gameState?.moves || [],
+                playerColor: settings?.color || 'w',
+                fen: gameState?.fen
+            };
+            console.log('[KidsGamePlay] Game ended, sending result:', resultObject);
+            setTimeout(() => onGameEnd?.(resultObject), 500);
         }
-    }, [gameState?.isGameOver, gameState?.gameOver, gameState?.result, gameState?.gameResult, gameState?.moves, onGameEnd]);
+    }, [gameState?.isGameOver, gameState?.gameOver, gameState?.moves, gameState?.fen, onGameEnd, settings?.color]);
 
     // Auto-scroll moves
     useEffect(() => {
