@@ -96,6 +96,13 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
 
     const selectedBot = bots[selectedBotIndex];
 
+    // Derived values for proper re-rendering (fixes stale closure issue)
+    const selectedTimeEmoji = timeControls.find(t => t.value === selectedTime)?.emoji || '⏱️';
+    const selectedTimeDisplay = selectedTime.replace('|0', 'm').replace('|', '+');
+    const selectedSideEmoji = selectedSide === 'WHITE' ? '♔' : selectedSide === 'BLACK' ? '♚' : '🎲';
+    const selectedGameTypeEmoji = gameType === 'STANDARD' ? '♟️' : '🎲';
+    const selectedGameTypeDisplay = gameType === 'STANDARD' ? 'Standard' : '960';
+
     const handleNextBot = () => {
         setSelectedBotIndex((prev) => (prev < bots.length - 1 ? prev + 1 : 0));
     };
@@ -489,7 +496,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         }}>
                             <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>TIME</div>
                             <div style={{ fontSize: '16px', fontWeight: '700' }}>
-                                {timeControls.find(t => t.value === selectedTime)?.emoji} {selectedTime.replace('|0', 'm').replace('|', '+')}
+                                {selectedTimeEmoji} {selectedTimeDisplay}
                             </div>
                         </button>
                         <button onClick={() => setGameType(g => g === 'STANDARD' ? 'CHESS960' : 'STANDARD')} style={{
@@ -499,7 +506,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         }}>
                             <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>MODE</div>
                             <div style={{ fontSize: '16px', fontWeight: '700' }}>
-                                {gameType === 'STANDARD' ? '♟️' : '🎲'} {gameType === 'STANDARD' ? 'Standard' : '960'}
+                                {selectedGameTypeEmoji} {selectedGameTypeDisplay}
                             </div>
                         </button>
                         <button onClick={() => {
@@ -513,7 +520,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         }}>
                             <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>SIDE</div>
                             <div style={{ fontSize: '16px', fontWeight: '700' }}>
-                                {selectedSide === 'WHITE' ? '♔' : selectedSide === 'BLACK' ? '♚' : '🎲'} {selectedSide}
+                                {selectedSideEmoji} {selectedSide}
                             </div>
                         </button>
                         <button onClick={handleNextBot} style={{
