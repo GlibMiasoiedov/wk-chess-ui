@@ -67,6 +67,20 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
     ]);
     const msgsEndRef = useRef(null);
 
+    // --- SESSION STATS (shared with Adult) ---
+    const [sessionStats, setSessionStats] = useState({ games: 0, rating: 0, wins: 0, losses: 0, draws: 0, lastRatingChange: 0 });
+
+    useEffect(() => {
+        try {
+            const savedStats = localStorage.getItem('wk_session_stats');
+            if (savedStats) {
+                setSessionStats(JSON.parse(savedStats));
+            }
+        } catch (e) {
+            console.error('[KidsNewGame] Error loading session stats:', e);
+        }
+    }, []);
+
     const handleSendMessage = () => {
         if (!chatInput.trim()) return;
         setMessages([...messages, { id: Date.now(), sender: 'user', text: chatInput }]);
@@ -243,12 +257,14 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#ffd93d' }}>1346</div>
-                                        <div style={{ color: '#22c55e', fontSize: '11px', marginTop: '4px' }}>📈 +39</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#ffd93d' }}>{sessionStats.rating || 0}</div>
+                                        <div style={{ color: sessionStats.lastRatingChange >= 0 ? '#22c55e' : '#ef4444', fontSize: '11px', marginTop: '4px' }}>
+                                            {sessionStats.lastRatingChange >= 0 ? '📈' : '📉'} {sessionStats.lastRatingChange >= 0 ? '+' : ''}{sessionStats.lastRatingChange || 0}
+                                        </div>
                                         <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>RATING</div>
                                     </div>
                                     <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '24px', fontWeight: '800' }}>14</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800' }}>{sessionStats.games || 0}</div>
                                         <div style={{ color: '#64748b', fontSize: '10px', marginTop: '6px' }}>🎮 GAMES</div>
                                     </div>
                                 </div>
