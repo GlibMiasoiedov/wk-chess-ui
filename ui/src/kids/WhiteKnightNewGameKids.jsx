@@ -96,12 +96,27 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
 
     const selectedBot = bots[selectedBotIndex];
 
-    // Derived values for proper re-rendering (fixes stale closure issue)
-    const selectedTimeEmoji = timeControls.find(t => t.value === selectedTime)?.emoji || '⏱️';
-    const selectedTimeDisplay = selectedTime.replace('|0', 'm').replace('|', '+');
-    const selectedSideEmoji = selectedSide === 'WHITE' ? '♔' : selectedSide === 'BLACK' ? '♚' : '🎲';
-    const selectedGameTypeEmoji = gameType === 'STANDARD' ? '♟️' : '🎲';
-    const selectedGameTypeDisplay = gameType === 'STANDARD' ? 'Standard' : '960';
+    // Derived values with useMemo for explicit dependency tracking
+    const selectedTimeEmoji = React.useMemo(() =>
+        timeControls.find(t => t.value === selectedTime)?.emoji || '⏱️',
+        [selectedTime]
+    );
+    const selectedTimeDisplay = React.useMemo(() =>
+        selectedTime.replace('|0', 'm').replace('|', '+'),
+        [selectedTime]
+    );
+    const selectedSideEmoji = React.useMemo(() =>
+        selectedSide === 'WHITE' ? '♔' : selectedSide === 'BLACK' ? '♚' : '🎲',
+        [selectedSide]
+    );
+    const selectedGameTypeEmoji = React.useMemo(() =>
+        gameType === 'STANDARD' ? '♟️' : '🎲',
+        [gameType]
+    );
+    const selectedGameTypeDisplay = React.useMemo(() =>
+        gameType === 'STANDARD' ? 'Standard' : '960',
+        [gameType]
+    );
 
     const handleNextBot = () => {
         setSelectedBotIndex((prev) => (prev < bots.length - 1 ? prev + 1 : 0));
@@ -192,7 +207,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
                     }}>♞</div>
                     <span style={{ fontWeight: '800', fontSize: '14px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>NEW GAME</span>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.42</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>v2.43</span>
                     <ThemeToggle />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
