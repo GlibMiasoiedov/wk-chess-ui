@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Zap, X, Send } from 'lucide-react';
+import { Settings, Zap, X, Send, User } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
 
@@ -177,6 +177,19 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         border: 'none', borderRadius: '16px', color: 'white', fontWeight: '700',
                         fontSize: '12px', cursor: 'pointer', display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '6px'
                     }}>📚 LEARN BASICS</button>
+
+                    {/* Login Button */}
+                    <button onClick={() => alert('Login feature coming soon!')} style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        background: 'rgba(255,217,61,0.1)', border: '2px solid rgba(255,217,61,0.3)',
+                        borderRadius: '12px', padding: '6px 12px',
+                        color: '#ffd93d', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                        textTransform: 'uppercase', letterSpacing: '0.05em'
+                    }}>
+                        <User size={16} />
+                        <span style={{ display: isMobile ? 'none' : 'block' }}>Log In</span>
+                    </button>
+
                     <button onClick={() => { console.log('Close clicked'); if (onClose) onClose(); else window.location.reload(); }} style={{
                         padding: '10px',
                         background: 'rgba(255,255,255,0.1)',
@@ -259,7 +272,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                             <div style={{
                                 background: 'linear-gradient(135deg, rgba(78,205,196,0.15), rgba(34,197,94,0.1))',
                                 borderRadius: '14px', padding: '16px', border: '2px solid rgba(78,205,196,0.2)',
-                                position: 'relative', overflow: 'hidden'
+                                position: 'relative', overflow: 'hidden', minWidth: '200px'
                             }}>
                                 <div style={{ fontSize: '11px', color: '#4ecdc4', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                                     📅 UPCOMING LIVE SESSIONS
