@@ -21,9 +21,12 @@ const bots = [
     { name: 'Happy', level: 3, rating: 800, emoji: '😊', color: '#ffd93d', difficulty: 0.35 },
     { name: 'Thinker', level: 4, rating: 1000, emoji: '🤔', color: '#ff9f43', difficulty: 0.5 },
     { name: 'Fighter', level: 5, rating: 1200, emoji: '😤', color: '#ff6b9d', difficulty: 0.65 },
-    { name: 'Wizard', level: 6, rating: 1400, emoji: '🧙‍♂️', color: '#a855f7', difficulty: 0.8 },
-    { name: 'King', level: 7, rating: 1600, emoji: '👑', color: '#f59e0b', difficulty: 0.9 },
-    { name: 'Robot', level: 8, rating: 2000, emoji: '🤖', color: '#ef4444', difficulty: 1.0 },
+    { name: 'Wizard', level: 6, rating: 1400, emoji: '🧙‍♂️', color: '#a855f7', difficulty: 0.75 },
+    { name: 'King', level: 7, rating: 1600, emoji: '👑', color: '#f59e0b', difficulty: 0.85 },
+    { name: 'Robot', level: 8, rating: 2000, emoji: '🤖', color: '#ef4444', difficulty: 0.9 },
+    { name: 'Master', level: 9, rating: 2400, emoji: '🏆', color: '#8b5cf6', difficulty: 0.95 },
+    { name: 'Champion', level: 10, rating: 2800, emoji: '⭐', color: '#facc15', difficulty: 0.98 },
+    { name: 'Engine', level: 11, rating: 3200, emoji: '💥', color: '#dc2626', difficulty: 1.0 },
 ];
 
 const timeControls = [
@@ -424,7 +427,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                 }}>
                     <h1 style={{ fontSize: isMobile ? '22px' : '26px', fontWeight: '800', margin: '0 0 24px 0', textAlign: 'center' }}>
                         <span style={{ color: '#ffd93d' }}>WHITE KNIGHT</span>{' '}
-                        <span style={{ color: '#64748b' }}>CASUAL</span>
+                        <span style={{ color: selectedBot.color }}>{selectedBot.name.toUpperCase()}</span>
                     </h1>
 
                     {/* Bot Avatar */}
