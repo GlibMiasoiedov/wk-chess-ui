@@ -513,7 +513,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                         }}>
                             <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>SIDE</div>
                             <div style={{ fontSize: '16px', fontWeight: '700' }}>
-                                {selectedSide === 'WHITE' ? '⬜' : selectedSide === 'BLACK' ? '⬛' : '🎲'} {selectedSide}
+                                {selectedSide === 'WHITE' ? '♔' : selectedSide === 'BLACK' ? '♚' : '🎲'} {selectedSide}
                             </div>
                         </button>
                         <button onClick={handleNextBot} style={{
