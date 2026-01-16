@@ -5,6 +5,7 @@ import WhiteKnightNewGame from "./WhiteKnightNewGame";
 import WhiteKnightGamePlay from "./WhiteKnightGamePlay";
 import WhiteKnightGamePlayKids from "./kids/WhiteKnightGamePlayKids";
 import WhiteKnightAnalysis from "./WhiteKnightAnalysis";
+import WhiteKnightAnalysisKids from "./kids/WhiteKnightAnalysisKids";
 import WhiteKnightLearningHub from "./WhiteKnightLearningHub";
 
 function AppContent() {
@@ -163,12 +164,21 @@ function AppContent() {
           )
         )}
         {screen === 'analysis' && (
-          <WhiteKnightAnalysis
-            onNewGame={handleNewGame}
-            isMobile={isMobile}
-            gameData={gameData}
-            settings={gameSettings}
-          />
+          isKidsMode ? (
+            <WhiteKnightAnalysisKids
+              onNewGame={handleNewGame}
+              isMobile={isMobile}
+              gameData={gameData}
+              settings={gameSettings}
+            />
+          ) : (
+            <WhiteKnightAnalysis
+              onNewGame={handleNewGame}
+              isMobile={isMobile}
+              gameData={gameData}
+              settings={gameSettings}
+            />
+          )
         )}
         {screen === 'learning' && (
           <WhiteKnightLearningHub

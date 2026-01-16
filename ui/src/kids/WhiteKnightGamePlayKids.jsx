@@ -546,7 +546,7 @@ export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile 
                         border: '3px solid rgba(239,68,68,0.4)', textAlign: 'center'
                     }}>
                         <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏳️</div>
-                        <h3 style={{ margin: '0 0 8px 0', fontSize: '20px' }}>Resign Game?</h3>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', color: 'white' }}>Resign Game?</h3>
                         <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '24px' }}>
                             Are you sure you want to resign? This will count as a loss.
                         </p>
