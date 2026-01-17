@@ -53,8 +53,8 @@ function ChessBoardInternal({
     getValidMoves = null,
     boardWidth,
     customArrows = [],
-    darkSquareStyle = { backgroundColor: '#779556' },
-    lightSquareStyle = { backgroundColor: '#ebecd0' }
+    darkSquareStyle = { backgroundColor: '#B58863' },
+    lightSquareStyle = { backgroundColor: '#F0D9B5' }
 }) {
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(400);
