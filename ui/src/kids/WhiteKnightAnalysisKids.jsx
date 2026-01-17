@@ -414,8 +414,8 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     position={currentFen}
                                     orientation={playerColor === 'b' ? 'black' : 'white'}
                                     disabled={true}
-                                    darkSquareStyle={{ backgroundColor: '#7c3aed' }}
-                                    lightSquareStyle={{ backgroundColor: '#fef08a' }}
+                                    darkSquareStyle={{ backgroundColor: '#739552' }}
+                                    lightSquareStyle={{ backgroundColor: '#ebecd0' }}
                                 />
 
                                 {/* Final Position Overlay - SAME AS ADULT */}
@@ -559,10 +559,10 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 borderTopColor: KIDS_THEME.accent,
                                 animation: 'spin 1s linear infinite', marginBottom: '24px'
                             }} />
-                            <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '8px', color: 'white' }}>
                                 🧙‍♂️ Analyzing Your Game...
                             </h2>
-                            <p style={{ color: KIDS_THEME.textMuted, fontSize: '13px', marginBottom: '24px' }}>
+                            <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '24px' }}>
                                 Stockfish is thinking
                             </p>
                             <div style={{ width: '100%', maxWidth: '280px' }}>

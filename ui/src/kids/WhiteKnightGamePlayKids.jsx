@@ -413,8 +413,8 @@ export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile 
                                 highlightSquares={gameState?.moves?.length > 0 ? [gameState.moves[gameState.moves.length - 1].from, gameState.moves[gameState.moves.length - 1].to] : []}
                                 disabled={!gameStarted || gameState?.isGameOver}
                                 playerColor={gameState?.playerColor || playerColorRef.current}
-                                darkSquareStyle={{ backgroundColor: '#7c3aed' }}
-                                lightSquareStyle={{ backgroundColor: '#fef08a' }}
+                                darkSquareStyle={{ backgroundColor: '#739552' }}
+                                lightSquareStyle={{ backgroundColor: '#ebecd0' }}
                             />
                         </div>
 
