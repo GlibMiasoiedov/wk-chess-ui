@@ -313,27 +313,54 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
             }}>
                 {/* Left: Title + Buttons */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {/* Back to Review - only in full-review */}
+                    {uiState === 'full-review' && (
+                        <button onClick={() => setUiState('complete')} style={{
+                            background: 'rgba(78,205,196,0.1)', border: '2px solid rgba(78,205,196,0.3)',
+                            color: KIDS_THEME.secondary, fontSize: '11px', fontWeight: '700',
+                            padding: '8px 14px', borderRadius: '10px',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
+                        }}>
+                            <ChevronLeft size={14} /> {isMobile ? '' : 'Back to Review'}
+                        </button>
+                    )}
+
                     {/* Title */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
-                            background: uiState === 'game-over' ? 'rgba(239,68,68,0.15)' : 'rgba(255,217,61,0.15)',
+                            background: uiState === 'game-over' ? 'rgba(239,68,68,0.15)' : uiState === 'full-review' ? 'rgba(168,85,247,0.15)' : 'rgba(255,217,61,0.15)',
                             padding: '8px', borderRadius: '10px',
-                            border: `2px solid ${uiState === 'game-over' ? 'rgba(239,68,68,0.3)' : 'rgba(255,217,61,0.3)'}`,
+                            border: `2px solid ${uiState === 'game-over' ? 'rgba(239,68,68,0.3)' : uiState === 'full-review' ? 'rgba(168,85,247,0.3)' : 'rgba(255,217,61,0.3)'}`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                            {uiState === 'game-over' ? <Flag size={18} style={{ color: KIDS_THEME.red }} /> : <Activity size={18} style={{ color: KIDS_THEME.accent }} />}
+                            {uiState === 'game-over' ? <Flag size={18} style={{ color: KIDS_THEME.red }} /> : uiState === 'full-review' ? <BarChart2 size={18} style={{ color: KIDS_THEME.purple }} /> : <Activity size={18} style={{ color: KIDS_THEME.accent }} />}
                         </div>
                         <span style={{
                             fontSize: '12px', fontWeight: '800', color: 'white',
                             textTransform: 'uppercase', letterSpacing: '0.15em',
                             display: isMobile ? 'none' : 'block'
                         }}>
-                            {uiState === 'game-over' ? 'Game Over' : uiState === 'complete' ? 'Game Review' : 'Analysis'}
+                            {uiState === 'game-over' ? 'Game Over' : uiState === 'full-review' ? 'Full Analysis' : uiState === 'complete' ? 'Game Review' : 'Analysis'}
                         </span>
                     </div>
 
                     {/* Separator */}
                     <div style={{ height: '20px', width: '2px', background: 'rgba(255,217,61,0.3)' }} />
+
+                    {/* Re-analyze - only in full-review */}
+                    {uiState === 'full-review' && (
+                        <button onClick={startReviewAnalysis} style={{
+                            background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(139,92,246,0.2))',
+                            border: '2px solid rgba(168,85,247,0.4)',
+                            color: KIDS_THEME.purple, fontSize: '11px', fontWeight: '700',
+                            padding: '8px 14px', borderRadius: '10px',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
+                        }}>
+                            <Zap size={14} /> {isMobile ? '' : 'Re-analyze'}
+                        </button>
+                    )}
 
                     {/* NEW GAME Button */}
                     <button onClick={onNewGame} style={{
@@ -346,17 +373,19 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                         <RotateCcw size={14} /> {isMobile ? '' : 'New Game'}
                     </button>
 
-                    {/* REAL HUMAN COACH Button */}
-                    <button onClick={() => window.open('https://whiteknight.academy/courses/', '_blank')} style={{
-                        background: 'linear-gradient(135deg, rgba(255,107,157,0.2), rgba(168,85,247,0.2))',
-                        border: '2px solid rgba(255,107,157,0.4)',
-                        color: KIDS_THEME.pink, fontSize: '11px', fontWeight: '700',
-                        padding: '8px 14px', borderRadius: '10px',
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                        cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
-                    }}>
-                        <BookOpen size={14} /> {isMobile ? 'Coach' : 'Real Human Coach'}
-                    </button>
+                    {/* REAL HUMAN COACH Button - hide in full-review on mobile */}
+                    {!(uiState === 'full-review' && isMobile) && (
+                        <button onClick={() => window.open('https://whiteknight.academy/courses/', '_blank')} style={{
+                            background: 'linear-gradient(135deg, rgba(255,107,157,0.2), rgba(168,85,247,0.2))',
+                            border: '2px solid rgba(255,107,157,0.4)',
+                            color: KIDS_THEME.pink, fontSize: '11px', fontWeight: '700',
+                            padding: '8px 14px', borderRadius: '10px',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
+                        }}>
+                            <BookOpen size={14} /> {isMobile ? 'Coach' : 'Real Human Coach'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Right: Close Button */}
@@ -652,6 +681,35 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 </div>
                             </div>
 
+                            {/* Coach Insight */}
+                            <div style={{ marginBottom: '20px' }}>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    color: KIDS_THEME.accent, fontSize: '12px', fontWeight: '700',
+                                    marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em'
+                                }}>
+                                    <span style={{ fontSize: '16px' }}>🧙‍♂️</span>
+                                    Coach Insight
+                                    <span style={{
+                                        fontSize: '9px', color: KIDS_THEME.textMuted,
+                                        fontWeight: '500', textTransform: 'none', letterSpacing: '0'
+                                    }}>Game Analysis</span>
+                                </div>
+                                <div style={{
+                                    background: 'rgba(255,217,61,0.05)',
+                                    border: '2px solid rgba(255,217,61,0.2)',
+                                    borderRadius: '12px', padding: '14px',
+                                    color: '#e2e8f0', fontSize: '13px', lineHeight: '1.6'
+                                }}>
+                                    {analysisStats?.blunder > 0
+                                        ? `⚠️ You made ${analysisStats.blunder} blunder${analysisStats.blunder > 1 ? 's' : ''} in this game. Blunders typically happen when we rush our moves. Take more time on critical positions, especially when pieces are under attack or when your opponent has active threats.`
+                                        : analysisStats?.mistake > 0
+                                            ? `👍 Good game! You avoided blunders but had ${analysisStats.mistake} mistake${analysisStats.mistake > 1 ? 's' : ''}. Focus on calculating one move deeper and you'll improve quickly!`
+                                            : `✨ Excellent play! You made very accurate moves. Keep up the great work and challenge stronger opponents!`
+                                    }
+                                </div>
+                            </div>
+
                             {/* Action Buttons */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <button onClick={handleFullAnalysis} style={{
@@ -677,67 +735,165 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                     {/* FULL REVIEW STATE */}
                     {uiState === 'full-review' && (
                         <div className="kids-scrollbar" style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
-                            {/* Current Move Info */}
+                            {/* Current Move Evaluation Panel */}
                             {currentMoveIndex >= 0 && analysisData?.[currentMoveIndex] && (
                                 <div style={{
                                     background: 'rgba(0,0,0,0.3)',
                                     border: `2px solid ${getClassColor(analysisData[currentMoveIndex].classification)}40`,
                                     borderRadius: '16px', padding: '16px', marginBottom: '16px'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                                        <span style={{ fontSize: '24px', fontWeight: '800', color: 'white' }}>
-                                            {Math.floor(currentMoveIndex / 2) + 1}.{currentMoveIndex % 2 === 0 ? '' : '..'} {analysisData[currentMoveIndex].san}
-                                        </span>
-                                        <span style={{
-                                            background: `${getClassColor(analysisData[currentMoveIndex].classification)}30`,
-                                            color: getClassColor(analysisData[currentMoveIndex].classification),
-                                            padding: '4px 10px', borderRadius: '8px',
-                                            fontSize: '11px', fontWeight: '700', textTransform: 'uppercase'
-                                        }}>
-                                            {analysisData[currentMoveIndex].classification}
+                                    {/* Move Header */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span style={{ fontSize: '22px', fontWeight: '800', color: 'white' }}>
+                                                {Math.floor(currentMoveIndex / 2) + 1}.{currentMoveIndex % 2 === 0 ? '' : '..'} {analysisData[currentMoveIndex].san}
+                                            </span>
+                                            <span style={{
+                                                background: `${getClassColor(analysisData[currentMoveIndex].classification)}30`,
+                                                color: getClassColor(analysisData[currentMoveIndex].classification),
+                                                padding: '4px 10px', borderRadius: '8px',
+                                                fontSize: '10px', fontWeight: '700', textTransform: 'uppercase'
+                                            }}>
+                                                {analysisData[currentMoveIndex].classification}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Move Description */}
+                                    <div style={{
+                                        color: '#e2e8f0', fontSize: '13px', lineHeight: '1.5', marginBottom: '12px',
+                                        background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px'
+                                    }}>
+                                        {analysisData[currentMoveIndex].classification === 'brilliant'
+                                            ? '✨ Brilliant! You found an exceptional move that changes the evaluation significantly.'
+                                            : analysisData[currentMoveIndex].classification === 'best'
+                                                ? '✅ You found the best move! This maintains or improves your position.'
+                                                : analysisData[currentMoveIndex].classification === 'good'
+                                                    ? '👍 A good move. There might be a slightly better option available.'
+                                                    : analysisData[currentMoveIndex].classification === 'book'
+                                                        ? '📖 This is a known opening move from theory.'
+                                                        : analysisData[currentMoveIndex].classification === 'inaccuracy'
+                                                            ? '⚡ Inaccuracy. A small mistake that slightly worsens your position.'
+                                                            : analysisData[currentMoveIndex].classification === 'mistake'
+                                                                ? '⚠️ Mistake. This move significantly worsens your position.'
+                                                                : analysisData[currentMoveIndex].classification === 'blunder'
+                                                                    ? '❌ Blunder! This move loses material or a significant advantage.'
+                                                                    : 'Analyzing this position...'
+                                        }
+                                    </div>
+
+                                    {/* Ask Coach Why Button */}
+                                    <button
+                                        onClick={() => window.open('https://whiteknight.academy/courses/', '_blank')}
+                                        style={{
+                                            width: '100%', padding: '10px',
+                                            background: 'linear-gradient(135deg, rgba(78,205,196,0.2), rgba(34,197,94,0.2))',
+                                            border: '2px solid rgba(78,205,196,0.4)',
+                                            borderRadius: '10px', color: KIDS_THEME.secondary,
+                                            fontSize: '11px', fontWeight: '700', textTransform: 'uppercase',
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                                        }}
+                                    >
+                                        🎓 Ask Coach Why
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Engine Analysis */}
+                            {currentMoveIndex >= 0 && analysisData?.[currentMoveIndex] && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{
+                                        color: KIDS_THEME.purple, fontSize: '11px', fontWeight: '700',
+                                        marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em',
+                                        display: 'flex', alignItems: 'center', gap: '8px'
+                                    }}>
+                                        <Target size={14} /> Engine Analysis
+                                        <span style={{ color: KIDS_THEME.textMuted, fontSize: '9px', fontWeight: '500' }}>
+                                            Depth: 15 • 2 best lines
                                         </span>
                                     </div>
-                                    <div style={{ color: KIDS_THEME.textMuted, fontSize: '13px' }}>
-                                        Eval: {analysisData[currentMoveIndex].eval?.toFixed(1) || '0.0'}
+                                    <div style={{
+                                        background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(168,85,247,0.2)',
+                                        borderRadius: '12px', overflow: 'hidden'
+                                    }}>
+                                        {/* Best Line 1 */}
+                                        <div style={{
+                                            padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                            display: 'flex', alignItems: 'center', gap: '10px'
+                                        }}>
+                                            <span style={{
+                                                background: analysisData[currentMoveIndex].eval > 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
+                                                color: analysisData[currentMoveIndex].eval > 0 ? KIDS_THEME.green : KIDS_THEME.red,
+                                                padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
+                                                minWidth: '50px', textAlign: 'center'
+                                            }}>
+                                                {analysisData[currentMoveIndex].eval > 0 ? '+' : ''}{analysisData[currentMoveIndex].eval?.toFixed(2) || '0.00'}
+                                            </span>
+                                            <span style={{ color: '#e2e8f0', fontSize: '12px', fontFamily: 'monospace' }}>
+                                                {analysisData[currentMoveIndex].bestMove || analysisData[currentMoveIndex].san}
+                                                {analysisData[currentMoveIndex].pv ? ` ${analysisData[currentMoveIndex].pv.slice(0, 5).join(' ')}` : ''}
+                                            </span>
+                                        </div>
+                                        {/* Best Line 2 (if available) */}
+                                        {analysisData[currentMoveIndex].secondBest && (
+                                            <div style={{
+                                                padding: '12px',
+                                                display: 'flex', alignItems: 'center', gap: '10px'
+                                            }}>
+                                                <span style={{
+                                                    background: 'rgba(148,163,184,0.2)',
+                                                    color: KIDS_THEME.textMuted,
+                                                    padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
+                                                    minWidth: '50px', textAlign: 'center'
+                                                }}>
+                                                    {analysisData[currentMoveIndex].secondBest.eval > 0 ? '+' : ''}{analysisData[currentMoveIndex].secondBest.eval?.toFixed(2) || '0.00'}
+                                                </span>
+                                                <span style={{ color: KIDS_THEME.textMuted, fontSize: '12px', fontFamily: 'monospace' }}>
+                                                    {analysisData[currentMoveIndex].secondBest.move || 'Alt. line...'}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Move List */}
+                            {/* Move History */}
                             <div style={{ color: KIDS_THEME.accent, fontSize: '12px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                                📜 Move List
+                                📜 Move History
                             </div>
                             <div style={{
                                 background: 'rgba(0,0,0,0.3)', borderRadius: '12px',
-                                border: '2px solid rgba(255,217,61,0.1)', overflow: 'hidden', maxHeight: '300px', overflowY: 'auto'
+                                border: '2px solid rgba(255,217,61,0.1)', overflow: 'hidden', maxHeight: '200px', overflowY: 'auto'
                             }}>
                                 {(() => {
                                     const rows = [];
                                     for (let i = 0; i < moves.length; i += 2) {
-                                        rows.push({ num: (i / 2) + 1, w: moves[i], b: moves[i + 1] });
+                                        rows.push({ num: (i / 2) + 1, w: moves[i], b: moves[i + 1], wIdx: i, bIdx: i + 1 });
                                     }
                                     return rows.map((row, idx) => (
                                         <div key={idx} style={{
-                                            display: 'grid', gridTemplateColumns: '40px 1fr 1fr',
+                                            display: 'grid', gridTemplateColumns: '35px 1fr 1fr',
                                             borderBottom: idx < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
                                         }}>
-                                            <span style={{ padding: '10px', color: KIDS_THEME.accent, fontWeight: '700', textAlign: 'center' }}>{row.num}</span>
+                                            <span style={{ padding: '8px', color: KIDS_THEME.textMuted, fontWeight: '600', textAlign: 'center', fontSize: '11px' }}>{row.num}</span>
                                             <span
-                                                onClick={() => goToMove(idx * 2)}
+                                                onClick={() => goToMove(row.wIdx)}
                                                 style={{
-                                                    padding: '10px', cursor: 'pointer', textAlign: 'center',
-                                                    background: currentMoveIndex === idx * 2 ? 'rgba(255,217,61,0.2)' : 'transparent',
-                                                    color: currentMoveIndex === idx * 2 ? KIDS_THEME.accent : 'white'
+                                                    padding: '8px', cursor: 'pointer', textAlign: 'center', fontSize: '12px',
+                                                    background: currentMoveIndex === row.wIdx ? 'rgba(255,217,61,0.2)' : 'transparent',
+                                                    color: currentMoveIndex === row.wIdx ? KIDS_THEME.accent : 'white',
+                                                    borderLeft: analysisData?.[row.wIdx] ? `3px solid ${getClassColor(analysisData[row.wIdx].classification)}` : 'none'
                                                 }}
                                             >
                                                 {row.w?.san || ''}
                                             </span>
                                             <span
-                                                onClick={() => row.b && goToMove(idx * 2 + 1)}
+                                                onClick={() => row.b && goToMove(row.bIdx)}
                                                 style={{
-                                                    padding: '10px', cursor: row.b ? 'pointer' : 'default', textAlign: 'center',
-                                                    background: currentMoveIndex === idx * 2 + 1 ? 'rgba(168,85,247,0.2)' : 'transparent',
-                                                    color: currentMoveIndex === idx * 2 + 1 ? KIDS_THEME.purple : '#a855f7'
+                                                    padding: '8px', cursor: row.b ? 'pointer' : 'default', textAlign: 'center', fontSize: '12px',
+                                                    background: currentMoveIndex === row.bIdx ? 'rgba(168,85,247,0.2)' : 'transparent',
+                                                    color: currentMoveIndex === row.bIdx ? KIDS_THEME.purple : KIDS_THEME.textMuted,
+                                                    borderLeft: analysisData?.[row.bIdx] ? `3px solid ${getClassColor(analysisData[row.bIdx].classification)}` : 'none'
                                                 }}
                                             >
                                                 {row.b?.san || ''}
