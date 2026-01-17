@@ -525,57 +525,103 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     </div>
                                 </div>
                             </div>
-
-                            {/* BOARD */}
-                            <div style={{
-                                width: '100%', aspectRatio: '1/1',
-                                position: 'relative', borderRadius: '12px', overflow: 'hidden',
-                                boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                                border: isExploring ? '3px solid rgba(168,85,247,0.6)' : '3px solid rgba(255,217,61,0.2)'
-                            }}>
-                                <ChessBoard
-                                    position={isExploring ? explorationFen : currentFen}
-                                    orientation={playerColor === 'b' ? 'black' : 'white'}
-                                    disabled={uiState !== 'full-review'}
-                                    onMove={uiState === 'full-review' ? handleExplorationMove : undefined}
-                                    allowAllColors={true}
-                                    showMoveHints={uiState === 'full-review'}
-                                    darkSquareStyle={{ backgroundColor: '#739552' }}
-                                    lightSquareStyle={{ backgroundColor: '#ebecd0' }}
-                                />
-
-                                {/* Exploration Mode Indicator */}
-                                {isExploring && (
+                            {/* BOARD CONTAINER WITH EVAL BAR */}
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                                {/* Evaluation Bar */}
+                                {(uiState === 'complete' || uiState === 'full-review') && (
                                     <div style={{
-                                        position: 'absolute', top: '8px', left: '8px',
-                                        background: 'rgba(168,85,247,0.9)', padding: '6px 12px',
-                                        borderRadius: '8px', fontSize: '10px', fontWeight: '700',
-                                        color: 'white', textTransform: 'uppercase', letterSpacing: '0.1em',
-                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                        cursor: 'pointer', border: '2px solid rgba(255,255,255,0.3)'
-                                    }} onClick={exitExploration}>
-                                        🔮 Exploration • Click to Exit
-                                    </div>
-                                )}
-
-                                {/* Final Position Overlay - SAME AS ADULT */}
-                                {showFinalPosition && uiState === 'game-over' && (
-                                    <div style={{
-                                        position: 'absolute', inset: 0,
-                                        display: 'flex', flexDirection: 'column',
-                                        alignItems: 'center', justifyContent: 'center',
-                                        background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(26,26,46,0.9) 100%)',
-                                        animation: 'overlayFade 2.5s ease forwards'
+                                        width: '24px', borderRadius: '8px', overflow: 'hidden',
+                                        background: 'linear-gradient(180deg, #1a1a2e 0%, #1a1a2e 100%)',
+                                        border: '2px solid rgba(255,217,61,0.2)',
+                                        display: 'flex', flexDirection: 'column', position: 'relative'
                                     }}>
-                                        <div style={{ fontSize: '56px', marginBottom: '8px' }}>{resultInfo.emoji}</div>
-                                        <div style={{ fontSize: '36px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>
-                                            {resultInfo.title}
-                                        </div>
-                                        <div style={{ fontSize: '13px', color: resultInfo.color, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: '700' }}>
-                                            Final Position
+                                        {/* White section (top) */}
+                                        <div style={{
+                                            background: '#f0d9b5',
+                                            transition: 'height 0.3s ease',
+                                            height: (() => {
+                                                const evalValue = isExploring
+                                                    ? (explorationAnalysis?.eval || 0)
+                                                    : (analysisData?.[currentMoveIndex]?.eval || 0);
+                                                const percentage = Math.max(5, Math.min(95, 50 - (evalValue * 10)));
+                                                return `${percentage}%`;
+                                            })()
+                                        }} />
+                                        {/* Black section (bottom) */}
+                                        <div style={{ flex: 1, background: '#1a1a2e' }} />
+                                        {/* Eval number overlay */}
+                                        <div style={{
+                                            position: 'absolute', inset: 0, display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            writingMode: 'vertical-rl', textOrientation: 'mixed',
+                                            fontSize: '10px', fontWeight: '700',
+                                            color: (() => {
+                                                const ev = isExploring
+                                                    ? (explorationAnalysis?.eval || 0)
+                                                    : (analysisData?.[currentMoveIndex]?.eval || 0);
+                                                return ev > 0 ? '#22c55e' : ev < 0 ? '#ef4444' : '#94a3b8';
+                                            })()
+                                        }}>
+                                            {(() => {
+                                                const ev = isExploring
+                                                    ? (explorationAnalysis?.eval || 0)
+                                                    : (analysisData?.[currentMoveIndex]?.eval || 0);
+                                                return ev > 0 ? `+${ev.toFixed(1)}` : ev.toFixed(1);
+                                            })()}
                                         </div>
                                     </div>
                                 )}
+
+                                {/* BOARD */}
+                                <div style={{
+                                    flex: 1, aspectRatio: '1/1',
+                                    position: 'relative', borderRadius: '12px', overflow: 'hidden',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                                    border: isExploring ? '3px solid rgba(168,85,247,0.6)' : '3px solid rgba(255,217,61,0.2)'
+                                }}>
+                                    <ChessBoard
+                                        position={isExploring ? explorationFen : currentFen}
+                                        orientation={playerColor === 'b' ? 'black' : 'white'}
+                                        disabled={uiState !== 'full-review'}
+                                        onMove={uiState === 'full-review' ? handleExplorationMove : undefined}
+                                        allowAllColors={true}
+                                        showMoveHints={uiState === 'full-review'}
+                                        darkSquareStyle={{ backgroundColor: '#739552' }}
+                                        lightSquareStyle={{ backgroundColor: '#ebecd0' }}
+                                    />
+
+                                    {/* Exploration Mode Indicator - simplified */}
+                                    {isExploring && (
+                                        <div style={{
+                                            position: 'absolute', top: '8px', right: '8px',
+                                            background: 'rgba(168,85,247,0.9)', padding: '4px 10px',
+                                            borderRadius: '6px', fontSize: '9px', fontWeight: '700',
+                                            color: 'white', textTransform: 'uppercase',
+                                            cursor: 'pointer', border: '2px solid rgba(255,255,255,0.3)'
+                                        }} onClick={exitExploration}>
+                                            ✕ Exit
+                                        </div>
+                                    )}
+
+                                    {/* Final Position Overlay - SAME AS ADULT */}
+                                    {showFinalPosition && uiState === 'game-over' && (
+                                        <div style={{
+                                            position: 'absolute', inset: 0,
+                                            display: 'flex', flexDirection: 'column',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(26,26,46,0.9) 100%)',
+                                            animation: 'overlayFade 2.5s ease forwards'
+                                        }}>
+                                            <div style={{ fontSize: '56px', marginBottom: '8px' }}>{resultInfo.emoji}</div>
+                                            <div style={{ fontSize: '36px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>
+                                                {resultInfo.title}
+                                            </div>
+                                            <div style={{ fontSize: '13px', color: resultInfo.color, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: '700' }}>
+                                                Final Position
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Player Info */}
@@ -933,9 +979,13 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                             const data = isExploring ? explorationAnalysis : analysisData?.[currentMoveIndex];
                                             if (!data) return null;
                                             const evalValue = data.eval || 0;
+                                            const playedMove = data.san;
+                                            const engineBest = isExploring ? data.bestMoveSan : data.bestMove;
+                                            const isSameMove = playedMove === engineBest;
+
                                             return (
                                                 <>
-                                                    {/* Line 1: Position evaluation + Best move */}
+                                                    {/* Row 1: Engine's Best Move */}
                                                     <div style={{
                                                         padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)',
                                                         display: 'flex', alignItems: 'center', gap: '10px'
@@ -950,7 +1000,10 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                         </span>
                                                         <div style={{ flex: 1 }}>
                                                             <div style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '2px' }}>
-                                                                Best: {isExploring && data.bestMoveSan ? data.bestMoveSan : data.bestMove || data.san}
+                                                                {isExploring ? 'Best response: ' : (isSameMove ? '✓ You played best: ' : 'Better was: ')}
+                                                                <span style={{ color: isSameMove ? KIDS_THEME.green : KIDS_THEME.accent }}>
+                                                                    {engineBest || playedMove}
+                                                                </span>
                                                             </div>
                                                             {(isExploring && data.pvSan?.length > 0) && (
                                                                 <div style={{ color: KIDS_THEME.textMuted, fontSize: '11px', fontFamily: 'monospace' }}>
@@ -959,7 +1012,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                             )}
                                                             {(!isExploring && data.pv?.length > 0) && (
                                                                 <div style={{ color: KIDS_THEME.textMuted, fontSize: '11px', fontFamily: 'monospace' }}>
-                                                                    {data.pv.slice(0, 4).join(' ')}
+                                                                    Continuation: {data.pv.slice(0, 4).join(' ')}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -985,21 +1038,29 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                             </span>
                                                         </div>
                                                     )}
-
-                                                    {/* Exploration hint */}
-                                                    {isExploring && (
-                                                        <div style={{
-                                                            padding: '10px 12px', background: 'rgba(168,85,247,0.1)',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                                                            fontSize: '10px', color: KIDS_THEME.purple, fontWeight: '600'
-                                                        }}>
-                                                            💡 Move a piece to continue exploring
-                                                        </div>
-                                                    )}
                                                 </>
                                             );
                                         })()}
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Exploration Mode Hint - moved here */}
+                            {isExploring && (
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(139,92,246,0.15))',
+                                    border: '2px solid rgba(168,85,247,0.3)',
+                                    borderRadius: '12px', padding: '12px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                    marginBottom: '16px'
+                                }}>
+                                    <span style={{ fontSize: '16px' }}>🔮</span>
+                                    <span style={{ color: KIDS_THEME.purple, fontSize: '12px', fontWeight: '600' }}>
+                                        Exploration Mode
+                                    </span>
+                                    <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
+                                        Move pieces to explore positions
+                                    </span>
                                 </div>
                             )}
 
@@ -1009,7 +1070,8 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                             </div>
                             <div style={{
                                 background: 'rgba(0,0,0,0.3)', borderRadius: '12px',
-                                border: '2px solid rgba(255,217,61,0.1)', overflow: 'hidden', maxHeight: '200px', overflowY: 'auto'
+                                border: '2px solid rgba(255,217,61,0.1)', overflow: 'hidden',
+                                flex: 1, minHeight: '200px', maxHeight: '400px', overflowY: 'auto'
                             }}>
                                 {(() => {
                                     const rows = [];
