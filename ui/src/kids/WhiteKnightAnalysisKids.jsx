@@ -35,7 +35,7 @@ const KIDS_THEME = {
 
 // --- MAIN COMPONENT ---
 export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData, settings }) {
-    // UI States: game-over, analyzing, complete, full-review
+    // UI States: game-over, analyzing, complete, auth-modal, check-inbox, full-analyzing, full-review
     const [uiState, setUiState] = useState('game-over');
     const [progress, setProgress] = useState(0);
     const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
@@ -45,6 +45,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
     const [ratingChange, setRatingChange] = useState(0);
     const [showFinalPosition, setShowFinalPosition] = useState(true);
     const [currentFen, setCurrentFen] = useState('start');
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     // Game data
     const moves = useMemo(() => gameData?.moves || [], [gameData?.moves]);
@@ -241,6 +242,38 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
         return colors[c] || '#94a3b8';
     };
 
+    // Full Analysis flow - Same as Adult version
+    const handleFullAnalysis = () => {
+        if (isLoggedIn) {
+            startFullAnalysisAnimation();
+        } else {
+            setUiState('auth-modal');
+        }
+    };
+
+    const handleCreateAccount = () => {
+        setUiState('check-inbox');
+        setTimeout(() => {
+            setIsLoggedIn(true);
+            startFullAnalysisAnimation();
+        }, 2000);
+    };
+
+    const startFullAnalysisAnimation = () => {
+        setUiState('full-analyzing');
+        setProgress(0);
+        const interval = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => setUiState('full-review'), 300);
+                    return 100;
+                }
+                return prev + 1;
+            });
+        }, 25);
+    };
+
     return (
         <div style={{
             height: '100%', width: '100%',
@@ -322,7 +355,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                         display: 'flex', alignItems: 'center', gap: '6px',
                         cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
                     }}>
-                        <BookOpen size={14} /> {isMobile ? '👨‍🏫' : '👨‍🏫 Real Human Coach'}
+                        <BookOpen size={14} /> {isMobile ? 'Coach' : 'Real Human Coach'}
                     </button>
                 </div>
 
@@ -621,7 +654,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
 
                             {/* Action Buttons */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <button onClick={() => setUiState('full-review')} style={{
+                                <button onClick={handleFullAnalysis} style={{
                                     width: '100%', background: 'linear-gradient(135deg, #4ecdc4, #22c55e)',
                                     color: '#1a1a2e', fontWeight: '700', padding: '14px', borderRadius: '12px',
                                     fontSize: '13px', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
@@ -729,6 +762,148 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                     )}
                 </aside>
             </div>
+
+            {/* AUTH MODAL */}
+            {uiState === 'auth-modal' && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 100,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', padding: '16px'
+                }}>
+                    <div style={{
+                        backgroundColor: '#1a1a2e', border: '3px solid rgba(255,217,61,0.3)',
+                        padding: '32px', borderRadius: '20px', maxWidth: '400px', width: '100%',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative', textAlign: 'center'
+                    }}>
+                        {/* Close Button */}
+                        <button onClick={() => setUiState('complete')} style={{
+                            position: 'absolute', top: '16px', right: '16px',
+                            width: '32px', height: '32px', borderRadius: '50%',
+                            background: 'rgba(239,68,68,0.1)', border: '2px solid rgba(239,68,68,0.3)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: KIDS_THEME.red
+                        }}>
+                            <X size={16} />
+                        </button>
+
+                        <div style={{
+                            width: '60px', height: '60px', margin: '0 auto 20px',
+                            background: 'rgba(255,217,61,0.1)', borderRadius: '50%',
+                            border: '2px solid rgba(255,217,61,0.3)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <span style={{ fontSize: '28px' }}>🔒</span>
+                        </div>
+
+                        <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '12px', color: 'white' }}>
+                            Unlock Full Analysis
+                        </h2>
+                        <p style={{ color: KIDS_THEME.textMuted, fontSize: '14px', marginBottom: '24px' }}>
+                            Join White Knight Academy to see move-by-move evaluation
+                        </p>
+
+                        <input
+                            type="email"
+                            placeholder="Email address"
+                            style={{
+                                width: '100%', padding: '14px', marginBottom: '12px',
+                                background: 'rgba(255,255,255,0.05)', border: '2px solid rgba(255,217,61,0.2)',
+                                borderRadius: '12px', color: 'white', fontSize: '14px',
+                                outline: 'none'
+                            }}
+                        />
+
+                        <button onClick={handleCreateAccount} style={{
+                            width: '100%', padding: '14px',
+                            background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
+                            border: 'none', borderRadius: '12px',
+                            color: '#1a1a2e', fontWeight: '700', fontSize: '13px',
+                            textTransform: 'uppercase', cursor: 'pointer', marginBottom: '16px'
+                        }}>
+                            Continue
+                        </button>
+
+                        <div style={{ color: KIDS_THEME.textMuted, fontSize: '12px', marginBottom: '12px' }}>or</div>
+
+                        <button onClick={handleCreateAccount} style={{
+                            width: '100%', padding: '14px',
+                            background: 'rgba(255,255,255,0.05)', border: '2px solid rgba(255,255,255,0.2)',
+                            borderRadius: '12px', color: 'white', fontWeight: '600', fontSize: '13px',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                        }}>
+                            <span>🅶</span> Continue with Google
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* CHECK INBOX MODAL */}
+            {uiState === 'check-inbox' && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 100,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.95)', padding: '24px', textAlign: 'center'
+                }}>
+                    <div style={{
+                        width: '80px', height: '80px', margin: '0 auto 24px',
+                        background: 'rgba(255,217,61,0.1)', borderRadius: '50%',
+                        border: '2px solid rgba(255,217,61,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <span style={{ fontSize: '40px' }}>📧</span>
+                    </div>
+                    <h2 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '12px', color: 'white' }}>
+                        Check Your Inbox
+                    </h2>
+                    <p style={{ color: KIDS_THEME.textMuted, fontSize: '14px', marginBottom: '24px' }}>
+                        We sent a verification link
+                    </p>
+                    <button onClick={startFullAnalysisAnimation} style={{
+                        padding: '12px 24px',
+                        background: 'transparent', border: '2px solid rgba(255,217,61,0.3)',
+                        borderRadius: '10px', color: KIDS_THEME.accent,
+                        fontWeight: '700', fontSize: '12px', textTransform: 'uppercase',
+                        cursor: 'pointer'
+                    }}>
+                        Skip for Demo
+                    </button>
+                </div>
+            )}
+
+            {/* FULL ANALYZING MODAL */}
+            {uiState === 'full-analyzing' && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 100,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.95)', padding: '24px', textAlign: 'center'
+                }}>
+                    <div style={{
+                        width: '80px', height: '80px', borderRadius: '50%',
+                        border: '4px solid rgba(255,217,61,0.2)',
+                        borderTopColor: KIDS_THEME.accent,
+                        animation: 'spin 1s linear infinite', marginBottom: '24px'
+                    }} />
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '8px', color: 'white' }}>
+                        Analyzing Your Game...
+                    </h2>
+                    <p style={{ color: KIDS_THEME.textMuted, fontSize: '13px', marginBottom: '24px' }}>
+                        Stockfish
+                    </p>
+                    <div style={{ width: '280px' }}>
+                        <div style={{
+                            height: '8px', background: 'rgba(255,217,61,0.2)',
+                            borderRadius: '8px', overflow: 'hidden'
+                        }}>
+                            <div style={{
+                                height: '100%', background: 'linear-gradient(90deg, #ffd93d, #ff9f43)',
+                                width: `${progress}%`, transition: 'width 0.1s', borderRadius: '8px'
+                            }} />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
