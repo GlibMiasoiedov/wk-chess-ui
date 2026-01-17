@@ -1026,11 +1026,16 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                             const data = isExploring ? explorationAnalysis : analysisData?.[currentMoveIndex];
                                             if (!data) return null;
                                             const evalValue = data.eval || 0;
-                                            // Use the position AFTER the move for PV conversion (opponent's best response)
-                                            const fenForPv = data.fen || currentFen;
+                                            // Debug: log the PV data
+                                            console.log('[EngineAnalysis] Move:', currentMoveIndex, 'data.pv:', data.pv, 'fenBefore:', data.fenBefore, 'fen:', data.fen);
+
+                                            // PV comes from beforeResult (position BEFORE the move), so use fenBefore
+                                            const fenForPv = data.fenBefore || data.fen || currentFen;
 
                                             // Convert PV to SAN with clickable positions
                                             const pvMoves = convertPvToSan(fenForPv, data.pv || []);
+                                            console.log('[EngineAnalysis] pvMoves result:', pvMoves);
+
                                             const moveNum = Math.floor((currentMoveIndex + 1) / 2) + 1;
                                             const isBlackJustMoved = currentMoveIndex % 2 === 1;
 
@@ -1219,60 +1224,108 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 })()}
                             </div>
 
-                            {/* AI Chat Widget - Collapsed state */}
-                            {/* AI Chat Widget - Unified collapsible */}
-                            <div style={{
-                                marginTop: '16px', borderRadius: '12px', overflow: 'hidden',
-                                background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(168,85,247,0.15))',
-                                border: '2px solid rgba(168,85,247,0.3)',
-                                display: 'flex', flexDirection: 'column'
-                            }}>
-                                {/* Header - always visible */}
-                                <div onClick={() => setIsChatOpen(!isChatOpen)} style={{
-                                    padding: '10px 12px', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '10px',
-                                    borderBottom: isChatOpen ? '1px solid rgba(168,85,247,0.3)' : 'none'
-                                }}>
-                                    <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #ff6b9d, #a855f7)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <MessageCircle size={14} fill="currentColor" />
+                            {/* AI Chat Widget (clickable to expand) */}
+                            {!isChatOpen && (
+                                <div
+                                    onClick={() => setIsChatOpen(true)}
+                                    style={{
+                                        marginTop: '16px',
+                                        background: 'linear-gradient(135deg, rgba(255,107,157,0.2), rgba(168,85,247,0.2))',
+                                        borderRadius: '12px', padding: '12px',
+                                        border: '2px solid rgba(255,107,157,0.3)',
+                                        cursor: 'pointer', transition: 'border-color 0.2s'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{
+                                            width: '32px', height: '32px', background: 'linear-gradient(135deg, #ff6b9d, #a855f7)',
+                                            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        }}>
+                                            <Zap size={16} fill="currentColor" />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <span style={{ fontWeight: '700', fontSize: '11px' }}>AI Coach</span>
+                                            <div style={{ color: '#64748b', fontSize: '9px' }}>Need help? Ask me! 🎉</div>
+                                        </div>
+                                        <span style={{ color: '#a855f7', fontSize: '16px' }}>›</span>
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '700', fontSize: '11px', color: 'white' }}>{isChatOpen ? 'AI Coach' : 'Ask AI Coach'}</div>
-                                        <div style={{ color: isChatOpen ? '#22c55e' : KIDS_THEME.textMuted, fontSize: '9px' }}>{isChatOpen ? '● Online' : 'Tap to chat'}</div>
-                                    </div>
-                                    <ChevronRight size={16} color={KIDS_THEME.purple} style={{ transform: isChatOpen ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 0.2s' }} />
                                 </div>
+                            )}
 
-                                {/* Chat content - only when open */}
-                                {isChatOpen && (
-                                    <>
-                                        {/* Messages */}
-                                        <div style={{ maxHeight: '150px', overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {chatMessages.map(msg => (
-                                                <div key={msg.id} style={{
-                                                    alignSelf: msg.sender === 'bot' ? 'flex-start' : 'flex-end',
-                                                    background: msg.sender === 'bot'
-                                                        ? 'rgba(168,85,247,0.2)'
-                                                        : 'rgba(255,217,61,0.2)',
-                                                    border: msg.sender === 'bot'
-                                                        ? '1px solid rgba(168,85,247,0.3)'
-                                                        : '1px solid rgba(255,217,61,0.3)',
-                                                    borderRadius: '12px', padding: '10px 14px',
-                                                    maxWidth: '85%', fontSize: '12px'
-                                                }}>
-                                                    {msg.text}
-                                                </div>
-                                            ))}
-                                            <div ref={chatEndRef} />
+                            {/* Chat Drawer (overlay when open) */}
+                            {isChatOpen && (
+                                <div style={{
+                                    position: 'absolute', inset: 0,
+                                    background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                                    display: 'flex', flexDirection: 'column',
+                                    zIndex: 50
+                                }}>
+                                    {/* Header */}
+                                    <div style={{
+                                        padding: '14px', borderBottom: '1px solid rgba(255,217,61,0.2)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: '32px', height: '32px', background: 'linear-gradient(135deg, #ff6b9d, #a855f7)',
+                                                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}>
+                                                <Zap size={16} fill="currentColor" />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: '700', fontSize: '12px' }}>AI Chess Coach</div>
+                                                <div style={{ color: '#22c55e', fontSize: '9px' }}>● Online</div>
+                                            </div>
                                         </div>
-                                        {/* Input */}
-                                        <div style={{ padding: '8px 10px', borderTop: '1px solid rgba(168,85,247,0.3)', display: 'flex', gap: '6px' }}>
-                                            <input type="text" placeholder="Ask about this move..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '8px 10px', color: 'white', fontSize: '11px', outline: 'none' }} />
-                                            <button onClick={handleSendMessage} style={{ background: 'linear-gradient(135deg, #ffd93d, #ff9f43)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', color: '#1a1a2e', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Send size={14} /></button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                                        <button onClick={() => setIsChatOpen(false)} style={{
+                                            padding: '8px', background: 'rgba(255,255,255,0.1)',
+                                            borderRadius: '50%', border: 'none',
+                                            color: 'white', cursor: 'pointer'
+                                        }}>
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+
+                                    {/* Messages */}
+                                    <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {chatMessages.map(msg => (
+                                            <div key={msg.id} style={{
+                                                alignSelf: msg.sender === 'bot' ? 'flex-start' : 'flex-end',
+                                                background: msg.sender === 'bot' ? 'rgba(168,85,247,0.2)' : 'rgba(255,217,61,0.2)',
+                                                border: msg.sender === 'bot' ? '1px solid rgba(168,85,247,0.3)' : '1px solid rgba(255,217,61,0.3)',
+                                                borderRadius: '12px', padding: '10px 14px', maxWidth: '85%', fontSize: '12px'
+                                            }}>
+                                                {msg.text}
+                                            </div>
+                                        ))}
+                                        <div ref={chatEndRef} />
+                                    </div>
+
+                                    {/* Input */}
+                                    <div style={{ padding: '12px', borderTop: '1px solid rgba(255,217,61,0.2)', display: 'flex', gap: '8px' }}>
+                                        <input
+                                            type="text" placeholder="Ask about this position..."
+                                            value={chatInput} onChange={(e) => setChatInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                            style={{
+                                                flex: 1, background: 'rgba(255,255,255,0.1)',
+                                                border: '1px solid rgba(255,255,255,0.2)',
+                                                borderRadius: '10px', padding: '10px 12px',
+                                                color: 'white', fontSize: '12px', outline: 'none'
+                                            }}
+                                        />
+                                        <button onClick={handleSendMessage} style={{
+                                            background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
+                                            border: 'none', borderRadius: '10px',
+                                            width: '40px', height: '40px', color: '#1a1a2e',
+                                            cursor: 'pointer', display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center'
+                                        }}>
+                                            <Send size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </aside>
