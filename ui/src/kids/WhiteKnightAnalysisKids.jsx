@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     Award, Zap, BookOpen, ChevronRight, ChevronLeft,
     AlertTriangle, AlertOctagon, CheckCircle2, XCircle, RotateCcw, Flag,
-    ChevronFirst, ChevronLast, Target, BarChart2, Trophy, X, Activity
+    ChevronFirst, ChevronLast, Target, BarChart2, Trophy, X, Activity, MessageCircle, Send
 } from 'lucide-react';
 import ChessBoard from '../components/ChessBoard.jsx';
 import { getStockfishAnalyzer } from '../engine/StockfishAnalyzer.js';
@@ -17,6 +17,27 @@ import { Chess } from 'chess.js';
 ║  📐 Purple/Yellow chess board like Kids Live Game                            ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 */
+
+// Helper: Convert UCI PV array to SAN with FEN positions for each move
+const convertPvToSan = (startFen, uciMoves) => {
+    if (!startFen || !uciMoves || uciMoves.length === 0) return [];
+    try {
+        const chess = new Chess(startFen);
+        const result = [];
+        for (const uciMove of uciMoves.slice(0, 8)) { // Limit to 8 moves
+            try {
+                const from = uciMove.slice(0, 2);
+                const to = uciMove.slice(2, 4);
+                const promotion = uciMove.length > 4 ? uciMove[4] : undefined;
+                const move = chess.move({ from, to, promotion });
+                if (move) {
+                    result.push({ san: move.san, fen: chess.fen(), uci: uciMove });
+                } else break;
+            } catch (e) { break; }
+        }
+        return result;
+    } catch (e) { return []; }
+};
 
 // --- KIDS THEME ---
 const KIDS_THEME = {
@@ -51,6 +72,32 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
     const [isExploring, setIsExploring] = useState(false);
     const [explorationFen, setExplorationFen] = useState(null);
     const [explorationAnalysis, setExplorationAnalysis] = useState(null);
+
+    // AI Chat states
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatInput, setChatInput] = useState('');
+    const [chatMessages, setChatMessages] = useState([
+        { id: 1, sender: 'bot', text: "Hi! I'm your chess coach 🎓 Ask me about any move!" }
+    ]);
+    const chatEndRef = useRef(null);
+
+    // Scroll chat to bottom when messages change
+    useEffect(() => {
+        if (isChatOpen) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages, isChatOpen]);
+
+    const handleSendMessage = () => {
+        if (!chatInput.trim()) return;
+        setChatMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: chatInput }]);
+        setChatInput('');
+        setTimeout(() => {
+            setChatMessages(prev => [...prev, {
+                id: Date.now(),
+                sender: 'bot',
+                text: "Great question! That's an interesting position. Let me analyze... 🤔"
+            }]);
+        }, 1000);
+    };
 
     // Game data
     const moves = useMemo(() => gameData?.moves || [], [gameData?.moves]);
@@ -966,7 +1013,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     }}>
                                         <Target size={14} /> {isExploring ? '🔮 Exploration Analysis' : 'Engine Analysis'}
                                         <span style={{ color: KIDS_THEME.textMuted, fontSize: '9px', fontWeight: '500' }}>
-                                            {isExploring ? 'Depth: 18 • Best response' : 'Depth: 15 • Best lines'}
+                                            {isExploring ? 'Depth: 18 • Best response' : 'Depth: 15'}
                                         </span>
                                     </div>
                                     <div style={{
@@ -974,73 +1021,129 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                         border: isExploring ? '2px solid rgba(168,85,247,0.4)' : '2px solid rgba(168,85,247,0.2)',
                                         borderRadius: '12px', overflow: 'hidden'
                                     }}>
-                                        {/* Current eval + best line */}
+                                        {/* Chess.com style PV lines */}
                                         {(() => {
                                             const data = isExploring ? explorationAnalysis : analysisData?.[currentMoveIndex];
                                             if (!data) return null;
                                             const evalValue = data.eval || 0;
-                                            const playedMove = data.san;
-                                            const engineBest = isExploring ? data.bestMoveSan : data.bestMove;
-                                            const isSameMove = playedMove === engineBest;
+                                            const fenBefore = data.fenBefore || currentFen;
+
+                                            // Convert PV to SAN with clickable positions
+                                            const pvMoves = convertPvToSan(fenBefore, data.pv || []);
+                                            const moveNum = Math.floor(currentMoveIndex / 2) + 1;
+                                            const isWhiteToMove = currentMoveIndex % 2 === 0;
+
+                                            // Click handler for PV move
+                                            const handlePvClick = (fen) => {
+                                                setIsExploring(true);
+                                                setExplorationFen(fen);
+                                                // Get analysis for this position
+                                                (async () => {
+                                                    const analyzer = await getStockfishAnalyzer();
+                                                    const analysis = await analyzer.analyzePosition(fen, 18);
+                                                    const newPv = convertPvToSan(fen, analysis.pv || []);
+                                                    setExplorationAnalysis({
+                                                        fen,
+                                                        eval: analysis.eval,
+                                                        bestMove: analysis.bestMove,
+                                                        bestMoveSan: newPv[0]?.san || analysis.bestMove,
+                                                        pv: analysis.pv,
+                                                        pvSan: newPv
+                                                    });
+                                                })();
+                                            };
 
                                             return (
                                                 <>
-                                                    {/* Row 1: Engine's Best Move */}
+                                                    {/* Best Line */}
                                                     <div style={{
-                                                        padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)',
-                                                        display: 'flex', alignItems: 'center', gap: '10px'
+                                                        padding: '10px 12px',
+                                                        borderBottom: '1px solid rgba(255,255,255,0.08)',
+                                                        display: 'flex', alignItems: 'flex-start', gap: '8px'
                                                     }}>
                                                         <span style={{
-                                                            background: evalValue > 0 ? 'rgba(34,197,94,0.25)' : evalValue < 0 ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.2)',
+                                                            background: evalValue > 0 ? 'rgba(34,197,94,0.3)' : evalValue < 0 ? 'rgba(239,68,68,0.3)' : 'rgba(148,163,184,0.2)',
                                                             color: evalValue > 0 ? KIDS_THEME.green : evalValue < 0 ? KIDS_THEME.red : KIDS_THEME.textMuted,
-                                                            padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
-                                                            minWidth: '55px', textAlign: 'center'
+                                                            padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800',
+                                                            minWidth: '48px', textAlign: 'center', flexShrink: 0
                                                         }}>
                                                             {evalValue > 0 ? '+' : ''}{evalValue.toFixed(2)}
                                                         </span>
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '2px' }}>
-                                                                {isExploring ? 'Best response: ' : (isSameMove ? '✓ You played best: ' : 'Better was: ')}
-                                                                <span style={{ color: isSameMove ? KIDS_THEME.green : KIDS_THEME.accent }}>
-                                                                    {engineBest || playedMove}
+                                                        <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                                                            {/* Best move icon */}
+                                                            <span style={{
+                                                                fontSize: '11px', marginRight: '4px',
+                                                                color: data.bestMoveSan === data.san ? KIDS_THEME.green : KIDS_THEME.accent
+                                                            }}>
+                                                                {data.bestMoveSan === data.san ? '✓' : '●'}
+                                                            </span>
+                                                            {/* Clickable PV moves */}
+                                                            {pvMoves.length > 0 ? pvMoves.map((mv, idx) => {
+                                                                const displayMoveNum = isWhiteToMove
+                                                                    ? moveNum + Math.floor(idx / 2)
+                                                                    : moveNum + Math.floor((idx + 1) / 2);
+                                                                const showNum = isWhiteToMove ? idx % 2 === 0 : idx % 2 === 1;
+                                                                return (
+                                                                    <span key={idx} style={{ display: 'inline-flex', gap: '2px' }}>
+                                                                        {showNum && (
+                                                                            <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
+                                                                                {displayMoveNum}.
+                                                                            </span>
+                                                                        )}
+                                                                        {idx === 0 && !isWhiteToMove && (
+                                                                            <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
+                                                                                {moveNum}...
+                                                                            </span>
+                                                                        )}
+                                                                        <span
+                                                                            onClick={() => handlePvClick(mv.fen)}
+                                                                            style={{
+                                                                                color: idx === 0 ? KIDS_THEME.accent : '#e2e8f0',
+                                                                                fontSize: '12px', fontWeight: idx === 0 ? '700' : '500',
+                                                                                cursor: 'pointer', padding: '2px 4px',
+                                                                                borderRadius: '4px',
+                                                                                background: 'rgba(255,255,255,0.05)',
+                                                                                transition: 'background 0.15s'
+                                                                            }}
+                                                                            onMouseOver={e => e.target.style.background = 'rgba(255,217,61,0.2)'}
+                                                                            onMouseOut={e => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                                                                        >
+                                                                            {mv.san}
+                                                                        </span>
+                                                                    </span>
+                                                                );
+                                                            }) : (
+                                                                <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px', fontStyle: 'italic' }}>
+                                                                    Analyzing position...
                                                                 </span>
-                                                            </div>
-                                                            {(isExploring && data.pvSan?.length > 0) && (
-                                                                <div style={{ color: KIDS_THEME.textMuted, fontSize: '11px', fontFamily: 'monospace' }}>
-                                                                    {data.pvSan.slice(0, 5).join(' → ')}
-                                                                </div>
-                                                            )}
-                                                            {(!isExploring && data.pv?.length > 0) && (
-                                                                <div style={{ color: KIDS_THEME.textMuted, fontSize: '11px', fontFamily: 'monospace' }}>
-                                                                    Continuation: {data.pv.slice(0, 4).join(' ')}
-                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
-
-                                                    {/* Line 2: Alternative (show if not exploring) */}
-                                                    {!isExploring && (
-                                                        <div style={{
-                                                            padding: '10px 12px',
-                                                            display: 'flex', alignItems: 'center', gap: '10px',
-                                                            background: 'rgba(255,255,255,0.02)'
-                                                        }}>
-                                                            <span style={{
-                                                                background: 'rgba(148,163,184,0.15)',
-                                                                color: KIDS_THEME.textMuted,
-                                                                padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '600',
-                                                                minWidth: '55px', textAlign: 'center'
-                                                            }}>
-                                                                Alt
-                                                            </span>
-                                                            <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
-                                                                {data.secondBest ? `${data.secondBest.move} (${data.secondBest.eval > 0 ? '+' : ''}${data.secondBest.eval?.toFixed(2)})` : 'Calculating...'}
-                                                            </span>
-                                                        </div>
-                                                    )}
                                                 </>
                                             );
                                         })()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Show Coach Insight when at start position */}
+                            {currentMoveIndex < 0 && uiState === 'full-review' && (
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(78,205,196,0.15), rgba(34,197,94,0.15))',
+                                    border: '2px solid rgba(78,205,196,0.3)',
+                                    borderRadius: '12px', padding: '16px', marginBottom: '16px'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                        <span style={{ fontSize: '20px' }}>🎓</span>
+                                        <span style={{ color: KIDS_THEME.secondary, fontSize: '13px', fontWeight: '700' }}>Coach's Summary</span>
+                                    </div>
+                                    <div style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: '1.6' }}>
+                                        {analysisStats?.blunder > 0
+                                            ? `This game had ${analysisStats.blunder} blunder${analysisStats.blunder > 1 ? 's' : ''} that changed the evaluation significantly. Click through the moves to learn from each position!`
+                                            : analysisStats?.mistake > 0
+                                                ? `You made ${analysisStats.mistake} mistake${analysisStats.mistake > 1 ? 's' : ''} in this game. The analysis shows where you could have played better.`
+                                                : `Good game! Your accuracy was ${analysisStats?.accuracy || 0}%. Navigate through moves to see the engine's recommendations.`
+                                        }
                                     </div>
                                 </div>
                             )}
@@ -1110,6 +1213,129 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     ));
                                 })()}
                             </div>
+
+                            {/* AI Chat Widget - Collapsed state */}
+                            {!isChatOpen && (
+                                <div
+                                    onClick={() => setIsChatOpen(true)}
+                                    style={{
+                                        marginTop: '16px', padding: '12px',
+                                        background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(168,85,247,0.15))',
+                                        border: '2px solid rgba(168,85,247,0.3)',
+                                        borderRadius: '12px', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(168,85,247,0.5)'}
+                                    onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(168,85,247,0.3)'}
+                                >
+                                    <div style={{
+                                        width: '32px', height: '32px',
+                                        background: 'linear-gradient(135deg, #ff6b9d, #a855f7)',
+                                        borderRadius: '50%', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <MessageCircle size={16} fill="currentColor" />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: '700', fontSize: '12px', color: 'white' }}>Ask AI Coach</div>
+                                        <div style={{ color: KIDS_THEME.textMuted, fontSize: '10px' }}>Tap to chat about the game</div>
+                                    </div>
+                                    <ChevronRight size={18} color={KIDS_THEME.purple} />
+                                </div>
+                            )}
+
+                            {/* AI Chat Drawer - Expanded state */}
+                            {isChatOpen && (
+                                <div style={{
+                                    position: 'absolute', left: 0, right: 0,
+                                    bottom: 0, top: '220px',
+                                    background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                                    display: 'flex', flexDirection: 'column',
+                                    zIndex: 50, borderTop: '2px solid rgba(168,85,247,0.3)'
+                                }}>
+                                    {/* Header */}
+                                    <div style={{
+                                        padding: '12px 16px', borderBottom: '1px solid rgba(255,217,61,0.2)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: '32px', height: '32px',
+                                                background: 'linear-gradient(135deg, #ff6b9d, #a855f7)',
+                                                borderRadius: '50%', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center'
+                                            }}>
+                                                <Zap size={16} fill="currentColor" />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: '700', fontSize: '12px' }}>AI Chess Coach</div>
+                                                <div style={{ color: '#22c55e', fontSize: '9px' }}>● Online</div>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setIsChatOpen(false)} style={{
+                                            padding: '8px', background: 'rgba(255,255,255,0.1)',
+                                            borderRadius: '50%', border: 'none',
+                                            color: 'white', cursor: 'pointer'
+                                        }}>
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+
+                                    {/* Messages */}
+                                    <div style={{
+                                        flex: 1, overflowY: 'auto', padding: '12px',
+                                        display: 'flex', flexDirection: 'column', gap: '10px'
+                                    }}>
+                                        {chatMessages.map(msg => (
+                                            <div key={msg.id} style={{
+                                                alignSelf: msg.sender === 'bot' ? 'flex-start' : 'flex-end',
+                                                background: msg.sender === 'bot'
+                                                    ? 'rgba(168,85,247,0.2)'
+                                                    : 'rgba(255,217,61,0.2)',
+                                                border: msg.sender === 'bot'
+                                                    ? '1px solid rgba(168,85,247,0.3)'
+                                                    : '1px solid rgba(255,217,61,0.3)',
+                                                borderRadius: '12px', padding: '10px 14px',
+                                                maxWidth: '85%', fontSize: '12px'
+                                            }}>
+                                                {msg.text}
+                                            </div>
+                                        ))}
+                                        <div ref={chatEndRef} />
+                                    </div>
+
+                                    {/* Input */}
+                                    <div style={{
+                                        padding: '10px 12px',
+                                        borderTop: '1px solid rgba(255,217,61,0.2)',
+                                        display: 'flex', gap: '8px'
+                                    }}>
+                                        <input
+                                            type="text"
+                                            placeholder="Ask about this position..."
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                            style={{
+                                                flex: 1, background: 'rgba(255,255,255,0.1)',
+                                                border: '1px solid rgba(255,255,255,0.2)',
+                                                borderRadius: '10px', padding: '10px 12px',
+                                                color: 'white', fontSize: '12px', outline: 'none'
+                                            }}
+                                        />
+                                        <button onClick={handleSendMessage} style={{
+                                            background: 'linear-gradient(135deg, #ffd93d, #ff9f43)',
+                                            border: 'none', borderRadius: '10px',
+                                            width: '44px', height: '40px', color: '#1a1a2e',
+                                            cursor: 'pointer', display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center'
+                                        }}>
+                                            <Send size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </aside>
