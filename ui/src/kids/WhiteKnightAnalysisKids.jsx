@@ -47,6 +47,11 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
     const [currentFen, setCurrentFen] = useState('start');
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+    // Exploration mode states
+    const [isExploring, setIsExploring] = useState(false);
+    const [explorationFen, setExplorationFen] = useState(null);
+    const [explorationAnalysis, setExplorationAnalysis] = useState(null);
+
     // Game data
     const moves = useMemo(() => gameData?.moves || [], [gameData?.moves]);
     const result = gameData?.result || {};
@@ -154,10 +159,99 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
             else if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); goToEnd(); }
             else if (e.key === 'ArrowDown') { e.preventDefault(); goToStart(); }
+            else if (e.key === 'Escape' && isExploring) { exitExploration(); }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentMoveIndex, totalMoves, moves]);
+    }, [currentMoveIndex, totalMoves, moves, isExploring]);
+
+    // Interactive Analysis - Handle user exploration moves
+    const handleExplorationMove = async (from, to) => {
+        if (!from || !to) return false;
+
+        try {
+            const { Chess } = await import('chess.js');
+            const startPosition = isExploring ? explorationFen : currentFen;
+            const chess = new Chess(startPosition);
+
+            const result = chess.move({
+                from: from,
+                to: to,
+                promotion: 'q' // Auto-promote to queen
+            });
+
+            if (!result) {
+                console.log('[KidsAnalysis] Invalid exploration move');
+                return false;
+            }
+
+            const newFen = chess.fen();
+            setIsExploring(true);
+            setExplorationFen(newFen);
+
+            // Run Stockfish analysis on the new position
+            const analyzer = await getStockfishAnalyzer();
+            const analysis = await analyzer.analyzePosition(newFen, 18); // depth 18
+
+            // Convert UCI bestMove to SAN notation
+            let bestMoveSan = analysis.bestMove;
+            let pvSan = [];
+            if (analysis.bestMove && analysis.bestMove.length >= 4) {
+                try {
+                    const tempChess = new Chess(newFen);
+                    const moveResult = tempChess.move({
+                        from: analysis.bestMove.slice(0, 2),
+                        to: analysis.bestMove.slice(2, 4),
+                        promotion: analysis.bestMove.length > 4 ? analysis.bestMove[4] : undefined
+                    });
+                    if (moveResult) {
+                        bestMoveSan = moveResult.san;
+                    }
+
+                    // Convert PV to SAN (up to 6 moves for display)
+                    if (analysis.pv && analysis.pv.length > 0) {
+                        const pvChess = new Chess(newFen);
+                        for (const uciMove of analysis.pv.slice(0, 6)) {
+                            try {
+                                const pvResult = pvChess.move({
+                                    from: uciMove.slice(0, 2),
+                                    to: uciMove.slice(2, 4),
+                                    promotion: uciMove.length > 4 ? uciMove[4] : undefined
+                                });
+                                if (pvResult) pvSan.push(pvResult.san);
+                            } catch (e) { break; }
+                        }
+                    }
+                } catch (e) {
+                    console.error('[KidsAnalysis] Error converting UCI to SAN:', e);
+                }
+            }
+
+            setExplorationAnalysis({
+                san: result.san,
+                fen: newFen,
+                eval: analysis.eval,
+                bestMove: analysis.bestMove,
+                bestMoveSan: bestMoveSan,
+                pv: analysis.pv,
+                pvSan: pvSan,
+                classification: analysis.eval > 0.5 ? 'good' : analysis.eval < -0.5 ? 'mistake' : 'book'
+            });
+
+            console.log(`[KidsAnalysis] Exploration: ${result.san}, eval: ${analysis.eval?.toFixed(2)}, best: ${analysis.bestMove}`);
+            return true;
+        } catch (err) {
+            console.error('[KidsAnalysis] Exploration move error:', err);
+            return false;
+        }
+    };
+
+    // Exit exploration mode
+    const exitExploration = () => {
+        setIsExploring(false);
+        setExplorationFen(null);
+        setExplorationAnalysis(null);
+    };
 
     // Start Review Analysis - SAME LOGIC AS ADULT VERSION
     const startReviewAnalysis = useCallback(async () => {
@@ -437,15 +531,32 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 width: '100%', aspectRatio: '1/1',
                                 position: 'relative', borderRadius: '12px', overflow: 'hidden',
                                 boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                                border: '3px solid rgba(255,217,61,0.2)'
+                                border: isExploring ? '3px solid rgba(168,85,247,0.6)' : '3px solid rgba(255,217,61,0.2)'
                             }}>
                                 <ChessBoard
-                                    position={currentFen}
+                                    position={isExploring ? explorationFen : currentFen}
                                     orientation={playerColor === 'b' ? 'black' : 'white'}
-                                    disabled={true}
+                                    disabled={uiState !== 'full-review'}
+                                    onMove={uiState === 'full-review' ? handleExplorationMove : undefined}
+                                    allowAllColors={true}
+                                    showMoveHints={uiState === 'full-review'}
                                     darkSquareStyle={{ backgroundColor: '#739552' }}
                                     lightSquareStyle={{ backgroundColor: '#ebecd0' }}
                                 />
+
+                                {/* Exploration Mode Indicator */}
+                                {isExploring && (
+                                    <div style={{
+                                        position: 'absolute', top: '8px', left: '8px',
+                                        background: 'rgba(168,85,247,0.9)', padding: '6px 12px',
+                                        borderRadius: '8px', fontSize: '10px', fontWeight: '700',
+                                        color: 'white', textTransform: 'uppercase', letterSpacing: '0.1em',
+                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                        cursor: 'pointer', border: '2px solid rgba(255,255,255,0.3)'
+                                    }} onClick={exitExploration}>
+                                        🔮 Exploration • Click to Exit
+                                    </div>
+                                )}
 
                                 {/* Final Position Overlay - SAME AS ADULT */}
                                 {showFinalPosition && uiState === 'game-over' && (
@@ -800,59 +911,94 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                             )}
 
                             {/* Engine Analysis */}
-                            {currentMoveIndex >= 0 && analysisData?.[currentMoveIndex] && (
+                            {(isExploring ? explorationAnalysis : (currentMoveIndex >= 0 && analysisData?.[currentMoveIndex])) && (
                                 <div style={{ marginBottom: '16px' }}>
                                     <div style={{
-                                        color: KIDS_THEME.purple, fontSize: '11px', fontWeight: '700',
+                                        color: isExploring ? KIDS_THEME.purple : KIDS_THEME.purple, fontSize: '11px', fontWeight: '700',
                                         marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em',
                                         display: 'flex', alignItems: 'center', gap: '8px'
                                     }}>
-                                        <Target size={14} /> Engine Analysis
+                                        <Target size={14} /> {isExploring ? '🔮 Exploration Analysis' : 'Engine Analysis'}
                                         <span style={{ color: KIDS_THEME.textMuted, fontSize: '9px', fontWeight: '500' }}>
-                                            Depth: 15 • 2 best lines
+                                            {isExploring ? 'Depth: 18 • Best response' : 'Depth: 15 • Best lines'}
                                         </span>
                                     </div>
                                     <div style={{
-                                        background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(168,85,247,0.2)',
+                                        background: isExploring ? 'rgba(168,85,247,0.1)' : 'rgba(0,0,0,0.3)',
+                                        border: isExploring ? '2px solid rgba(168,85,247,0.4)' : '2px solid rgba(168,85,247,0.2)',
                                         borderRadius: '12px', overflow: 'hidden'
                                     }}>
-                                        {/* Best Line 1 */}
-                                        <div style={{
-                                            padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                            display: 'flex', alignItems: 'center', gap: '10px'
-                                        }}>
-                                            <span style={{
-                                                background: analysisData[currentMoveIndex].eval > 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
-                                                color: analysisData[currentMoveIndex].eval > 0 ? KIDS_THEME.green : KIDS_THEME.red,
-                                                padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
-                                                minWidth: '50px', textAlign: 'center'
-                                            }}>
-                                                {analysisData[currentMoveIndex].eval > 0 ? '+' : ''}{analysisData[currentMoveIndex].eval?.toFixed(2) || '0.00'}
-                                            </span>
-                                            <span style={{ color: '#e2e8f0', fontSize: '12px', fontFamily: 'monospace' }}>
-                                                {analysisData[currentMoveIndex].bestMove || analysisData[currentMoveIndex].san}
-                                                {analysisData[currentMoveIndex].pv ? ` ${analysisData[currentMoveIndex].pv.slice(0, 5).join(' ')}` : ''}
-                                            </span>
-                                        </div>
-                                        {/* Best Line 2 (if available) */}
-                                        {analysisData[currentMoveIndex].secondBest && (
-                                            <div style={{
-                                                padding: '12px',
-                                                display: 'flex', alignItems: 'center', gap: '10px'
-                                            }}>
-                                                <span style={{
-                                                    background: 'rgba(148,163,184,0.2)',
-                                                    color: KIDS_THEME.textMuted,
-                                                    padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
-                                                    minWidth: '50px', textAlign: 'center'
-                                                }}>
-                                                    {analysisData[currentMoveIndex].secondBest.eval > 0 ? '+' : ''}{analysisData[currentMoveIndex].secondBest.eval?.toFixed(2) || '0.00'}
-                                                </span>
-                                                <span style={{ color: KIDS_THEME.textMuted, fontSize: '12px', fontFamily: 'monospace' }}>
-                                                    {analysisData[currentMoveIndex].secondBest.move || 'Alt. line...'}
-                                                </span>
-                                            </div>
-                                        )}
+                                        {/* Current eval + best line */}
+                                        {(() => {
+                                            const data = isExploring ? explorationAnalysis : analysisData?.[currentMoveIndex];
+                                            if (!data) return null;
+                                            const evalValue = data.eval || 0;
+                                            return (
+                                                <>
+                                                    {/* Line 1: Position evaluation + Best move */}
+                                                    <div style={{
+                                                        padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+                                                        display: 'flex', alignItems: 'center', gap: '10px'
+                                                    }}>
+                                                        <span style={{
+                                                            background: evalValue > 0 ? 'rgba(34,197,94,0.25)' : evalValue < 0 ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.2)',
+                                                            color: evalValue > 0 ? KIDS_THEME.green : evalValue < 0 ? KIDS_THEME.red : KIDS_THEME.textMuted,
+                                                            padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
+                                                            minWidth: '55px', textAlign: 'center'
+                                                        }}>
+                                                            {evalValue > 0 ? '+' : ''}{evalValue.toFixed(2)}
+                                                        </span>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '2px' }}>
+                                                                Best: {isExploring && data.bestMoveSan ? data.bestMoveSan : data.bestMove || data.san}
+                                                            </div>
+                                                            {(isExploring && data.pvSan?.length > 0) && (
+                                                                <div style={{ color: KIDS_THEME.textMuted, fontSize: '11px', fontFamily: 'monospace' }}>
+                                                                    {data.pvSan.slice(0, 5).join(' → ')}
+                                                                </div>
+                                                            )}
+                                                            {(!isExploring && data.pv?.length > 0) && (
+                                                                <div style={{ color: KIDS_THEME.textMuted, fontSize: '11px', fontFamily: 'monospace' }}>
+                                                                    {data.pv.slice(0, 4).join(' ')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Line 2: Alternative (show if not exploring) */}
+                                                    {!isExploring && (
+                                                        <div style={{
+                                                            padding: '10px 12px',
+                                                            display: 'flex', alignItems: 'center', gap: '10px',
+                                                            background: 'rgba(255,255,255,0.02)'
+                                                        }}>
+                                                            <span style={{
+                                                                background: 'rgba(148,163,184,0.15)',
+                                                                color: KIDS_THEME.textMuted,
+                                                                padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '600',
+                                                                minWidth: '55px', textAlign: 'center'
+                                                            }}>
+                                                                Alt
+                                                            </span>
+                                                            <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
+                                                                {data.secondBest ? `${data.secondBest.move} (${data.secondBest.eval > 0 ? '+' : ''}${data.secondBest.eval?.toFixed(2)})` : 'Calculating...'}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Exploration hint */}
+                                                    {isExploring && (
+                                                        <div style={{
+                                                            padding: '10px 12px', background: 'rgba(168,85,247,0.1)',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                                            fontSize: '10px', color: KIDS_THEME.purple, fontWeight: '600'
+                                                        }}>
+                                                            💡 Move a piece to continue exploring
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             )}
@@ -902,18 +1048,6 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                     ));
                                 })()}
                             </div>
-
-                            {/* Back to Summary */}
-                            <button onClick={() => setUiState('complete')} style={{
-                                width: '100%', marginTop: '16px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '2px solid rgba(255,255,255,0.2)', color: 'white',
-                                fontWeight: '700', padding: '12px', borderRadius: '12px',
-                                fontSize: '12px', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                            }}>
-                                ← Back to Summary
-                            </button>
                         </div>
                     )}
                 </aside>
