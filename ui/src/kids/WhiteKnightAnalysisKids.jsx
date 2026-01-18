@@ -72,6 +72,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
     const [isExploring, setIsExploring] = useState(false);
     const [explorationFen, setExplorationFen] = useState(null);
     const [explorationAnalysis, setExplorationAnalysis] = useState(null);
+    const [explorationHistory, setExplorationHistory] = useState([]); // Stack of previous FENs for undo
 
     // AI Chat states
     const [isChatOpen, setIsChatOpen] = useState(false);
@@ -208,14 +209,28 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(); }
-            else if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); goToEnd(); }
-            else if (e.key === 'ArrowDown') { e.preventDefault(); goToStart(); }
+
+            if (isExploring) {
+                // In exploration mode, left arrow goes back in exploration history
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    undoExplorationMove();
+                }
+                // Right arrow is disabled in exploration (can't redo)
+                else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                }
+            } else {
+                // Normal game navigation
+                if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(); }
+                else if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); goToEnd(); }
+                else if (e.key === 'ArrowDown') { e.preventDefault(); goToStart(); }
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentMoveIndex, totalMoves, moves, isExploring]);
+    }, [currentMoveIndex, totalMoves, moves, isExploring, explorationHistory]);
 
     // Interactive Analysis - Handle user exploration moves
     const handleExplorationMove = async (from, to) => {
@@ -238,6 +253,15 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
             }
 
             const newFen = chess.fen();
+
+            // Push current position to history before updating to new position
+            if (isExploring && explorationFen) {
+                setExplorationHistory(prev => [...prev, explorationFen]);
+            } else {
+                // Starting exploration from game position
+                setExplorationHistory([startPosition]);
+            }
+
             setIsExploring(true);
             setExplorationFen(newFen);
 
@@ -303,6 +327,47 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
         setIsExploring(false);
         setExplorationFen(null);
         setExplorationAnalysis(null);
+        setExplorationHistory([]);
+    };
+
+    // Undo exploration move (go back in variant)
+    const undoExplorationMove = async () => {
+        if (explorationHistory.length > 0) {
+            // Pop the last FEN from history
+            const newHistory = [...explorationHistory];
+            const prevFen = newHistory.pop();
+            setExplorationHistory(newHistory);
+            setExplorationFen(prevFen);
+
+            // Re-analyze the previous position
+            const analyzer = await getStockfishAnalyzer();
+            const analysis = await analyzer.analyzePosition(prevFen, 18);
+
+            // Extract UCI moves from PV
+            let explorationUci = [];
+            if (Array.isArray(analysis.pv) && analysis.pv.length > 0) {
+                const pvIdx = analysis.pv.indexOf('pv');
+                if (pvIdx !== -1 && pvIdx < analysis.pv.length - 1) {
+                    explorationUci = analysis.pv.slice(pvIdx + 1);
+                } else if (!analysis.pv.includes('score')) {
+                    explorationUci = analysis.pv;
+                }
+            }
+
+            const newPv = convertPvToSan(prevFen, explorationUci);
+            setExplorationAnalysis({
+                fen: prevFen,
+                fenBefore: prevFen,
+                eval: analysis.eval,
+                bestMove: analysis.bestMove,
+                bestMoveSan: newPv[0]?.san || analysis.bestMove,
+                pv: explorationUci,
+                pvSan: newPv
+            });
+        } else {
+            // No history left, exit exploration
+            exitExploration();
+        }
     };
 
     // Start Review Analysis - SAME LOGIC AS ADULT VERSION
@@ -1046,14 +1111,24 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                             console.log('[EngineAnalysis] pvMoves result:', pvMoves.slice(0, 5));
 
                                             // Parse FEN to get correct move number and side to move
-                                            // FEN format: "... w|b KQkq - halfmove fullmove"
+                                            // FEN format: "position w|b castling en_passant halfmove fullmove"
                                             const fenParts = fenForPv.split(' ');
                                             const sideToMove = fenParts[1] || 'w'; // 'w' or 'b'
                                             const fullMoveNum = parseInt(fenParts[5]) || 1;
                                             const isBlackToMove = sideToMove === 'b';
 
+                                            console.log('[PV Debug] fenForPv:', fenForPv, 'fullMoveNum:', fullMoveNum, 'isBlackToMove:', isBlackToMove);
+
                                             // Click handler for PV move
                                             const handlePvClick = (fen) => {
+                                                // Push current position to history
+                                                const currentPos = isExploring ? explorationFen : fenForPv;
+                                                if (isExploring && explorationFen) {
+                                                    setExplorationHistory(prev => [...prev, explorationFen]);
+                                                } else {
+                                                    setExplorationHistory([currentPos]);
+                                                }
+
                                                 setIsExploring(true);
                                                 setExplorationFen(fen);
                                                 // Get analysis for this position
@@ -1296,13 +1371,15 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 </div>
                             )}
 
-                            {/* Chat Drawer (overlay when open) */}
+                            {/* Chat Drawer (overlay at bottom when open) */}
                             {isChatOpen && (
                                 <div style={{
-                                    position: 'absolute', inset: 0,
+                                    position: 'absolute', left: 0, right: 0, bottom: 0,
+                                    height: '320px', maxHeight: '60%',
                                     background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
                                     display: 'flex', flexDirection: 'column',
-                                    zIndex: 50
+                                    zIndex: 50, borderTop: '2px solid rgba(168,85,247,0.4)',
+                                    borderRadius: '16px 16px 0 0'
                                 }}>
                                     {/* Header */}
                                     <div style={{
