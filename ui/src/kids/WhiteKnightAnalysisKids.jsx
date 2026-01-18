@@ -1201,7 +1201,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                                                 {fullMoveNum}...
                                                                             </span>
                                                                         )}
-                                                                        {showNum && !isBlackToMove && idx === 0 && (
+                                                                        {idx === 0 && !isBlackToMove && (
                                                                             <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
                                                                                 {fullMoveNum}.
                                                                             </span>
