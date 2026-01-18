@@ -1186,14 +1186,13 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                             {/* Clickable PV moves */}
                                                             {pvMoves.length > 0 ? pvMoves.map((mv, idx) => {
                                                                 // Calculate move number for each PV move
-                                                                // First move is at fullMoveNum (from FEN), alternating sides
-                                                                // If black to move, first is black, second is white (fullMoveNum+1), etc.
-                                                                const movesFromStart = idx;
+                                                                // When black to move: idx 0=black(N), 1=white(N+1), 2=black(N+1), 3=white(N+2)
+                                                                // When white to move: idx 0=white(N), 1=black(N), 2=white(N+1), 3=black(N+1)
                                                                 const currentMoveIsBlack = isBlackToMove ? (idx % 2 === 0) : (idx % 2 === 1);
-                                                                const displayNum = fullMoveNum + Math.floor((idx + (isBlackToMove ? 0 : 1)) / 2);
+                                                                // Corrected formula: when black to move, add 1 to idx; when white, add 0
+                                                                const displayNum = fullMoveNum + Math.floor((idx + (isBlackToMove ? 1 : 0)) / 2);
 
-                                                                // Show number before white's moves
-                                                                const showNum = !currentMoveIsBlack && (idx === 0 || (isBlackToMove && idx % 2 === 1) || (!isBlackToMove && idx % 2 === 0));
+                                                                // Show number before white's moves (not before black's moves)
 
                                                                 return (
                                                                     <span key={idx} style={{ display: 'inline-flex', gap: '2px' }}>
@@ -1442,7 +1441,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                             cursor: 'pointer', display: 'flex',
                                             alignItems: 'center', justifyContent: 'center'
                                         }}>
-                                            <Send size={16} />
+                                            <Send size={18} strokeWidth={2.5} />
                                         </button>
                                     </div>
                                 </div>
