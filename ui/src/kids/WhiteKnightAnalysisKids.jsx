@@ -1026,15 +1026,30 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                             const data = isExploring ? explorationAnalysis : analysisData?.[currentMoveIndex];
                                             if (!data) return null;
                                             const evalValue = data.eval || 0;
-                                            // Debug: log the PV data
-                                            console.log('[EngineAnalysis] Move:', currentMoveIndex, 'data.pv:', data.pv, 'fenBefore:', data.fenBefore, 'fen:', data.fen);
 
                                             // PV comes from beforeResult (position BEFORE the move), so use fenBefore
                                             const fenForPv = data.fenBefore || data.fen || currentFen;
 
+                                            // Extract actual UCI moves from PV array
+                                            // data.pv contains full info line: ['1', 'score', 'cp', '-27', ..., 'pv', 'e7e6', 'b1c3', ...]
+                                            // We need to extract only the moves after 'pv'
+                                            let uciMoves = [];
+                                            if (Array.isArray(data.pv) && data.pv.length > 0) {
+                                                const pvIndex = data.pv.indexOf('pv');
+                                                if (pvIndex !== -1 && pvIndex < data.pv.length - 1) {
+                                                    // Extract moves after 'pv' keyword
+                                                    uciMoves = data.pv.slice(pvIndex + 1);
+                                                } else if (!data.pv.includes('score') && !data.pv.includes('nodes')) {
+                                                    // If pv array doesn't have metadata, it's already just moves
+                                                    uciMoves = data.pv;
+                                                }
+                                            }
+
+                                            console.log('[EngineAnalysis] Move:', currentMoveIndex, 'extracted UCI:', uciMoves.slice(0, 5));
+
                                             // Convert PV to SAN with clickable positions
-                                            const pvMoves = convertPvToSan(fenForPv, data.pv || []);
-                                            console.log('[EngineAnalysis] pvMoves result:', pvMoves);
+                                            const pvMoves = convertPvToSan(fenForPv, uciMoves);
+                                            console.log('[EngineAnalysis] pvMoves result:', pvMoves.slice(0, 5));
 
                                             const moveNum = Math.floor((currentMoveIndex + 1) / 2) + 1;
                                             const isBlackJustMoved = currentMoveIndex % 2 === 1;
@@ -1047,13 +1062,25 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                 (async () => {
                                                     const analyzer = await getStockfishAnalyzer();
                                                     const analysis = await analyzer.analyzePosition(fen, 18);
-                                                    const newPv = convertPvToSan(fen, analysis.pv || []);
+
+                                                    // Extract UCI moves from PV (same logic as above)
+                                                    let explorationUci = [];
+                                                    if (Array.isArray(analysis.pv) && analysis.pv.length > 0) {
+                                                        const pvIdx = analysis.pv.indexOf('pv');
+                                                        if (pvIdx !== -1 && pvIdx < analysis.pv.length - 1) {
+                                                            explorationUci = analysis.pv.slice(pvIdx + 1);
+                                                        } else if (!analysis.pv.includes('score')) {
+                                                            explorationUci = analysis.pv;
+                                                        }
+                                                    }
+
+                                                    const newPv = convertPvToSan(fen, explorationUci);
                                                     setExplorationAnalysis({
                                                         fen,
                                                         eval: analysis.eval,
                                                         bestMove: analysis.bestMove,
                                                         bestMoveSan: newPv[0]?.san || analysis.bestMove,
-                                                        pv: analysis.pv,
+                                                        pv: explorationUci, // Store extracted UCI moves
                                                         pvSan: newPv
                                                     });
                                                 })();
