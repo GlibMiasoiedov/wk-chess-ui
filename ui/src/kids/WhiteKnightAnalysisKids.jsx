@@ -186,6 +186,12 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
     };
 
     const goToMove = (index) => {
+        // Exit exploration when clicking on move history
+        if (isExploring) {
+            setIsExploring(false);
+            setExplorationFen(null);
+            setExplorationAnalysis(null);
+        }
         if (index < 0) {
             goToStart();
         } else if (index >= totalMoves) {
@@ -206,7 +212,6 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
             else if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); goToEnd(); }
             else if (e.key === 'ArrowDown') { e.preventDefault(); goToStart(); }
-            else if (e.key === 'Escape' && isExploring) { exitExploration(); }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -637,18 +642,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                         lightSquareStyle={{ backgroundColor: '#ebecd0' }}
                                     />
 
-                                    {/* Exploration Mode Indicator - simplified */}
-                                    {isExploring && (
-                                        <div style={{
-                                            position: 'absolute', top: '8px', right: '8px',
-                                            background: 'rgba(168,85,247,0.9)', padding: '4px 10px',
-                                            borderRadius: '6px', fontSize: '9px', fontWeight: '700',
-                                            color: 'white', textTransform: 'uppercase',
-                                            cursor: 'pointer', border: '2px solid rgba(255,255,255,0.3)'
-                                        }} onClick={exitExploration}>
-                                            ✕ Exit
-                                        </div>
-                                    )}
+
 
                                     {/* Final Position Overlay - SAME AS ADULT */}
                                     {showFinalPosition && uiState === 'game-over' && (
@@ -938,7 +932,7 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
 
                     {/* FULL REVIEW STATE */}
                     {uiState === 'full-review' && (
-                        <div className="kids-scrollbar" style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+                        <div className="kids-scrollbar" style={{ flex: 1, overflow: 'auto', padding: '20px', position: 'relative' }}>
                             {/* Current Move Evaluation Panel */}
                             {currentMoveIndex >= 0 && analysisData?.[currentMoveIndex] && (
                                 <div style={{
@@ -1051,8 +1045,12 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                             const pvMoves = convertPvToSan(fenForPv, uciMoves);
                                             console.log('[EngineAnalysis] pvMoves result:', pvMoves.slice(0, 5));
 
-                                            const moveNum = Math.floor((currentMoveIndex + 1) / 2) + 1;
-                                            const isBlackJustMoved = currentMoveIndex % 2 === 1;
+                                            // Parse FEN to get correct move number and side to move
+                                            // FEN format: "... w|b KQkq - halfmove fullmove"
+                                            const fenParts = fenForPv.split(' ');
+                                            const sideToMove = fenParts[1] || 'w'; // 'w' or 'b'
+                                            const fullMoveNum = parseInt(fenParts[5]) || 1;
+                                            const isBlackToMove = sideToMove === 'b';
 
                                             // Click handler for PV move
                                             const handlePvClick = (fen) => {
@@ -1112,24 +1110,31 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                                             </span>
                                                             {/* Clickable PV moves */}
                                                             {pvMoves.length > 0 ? pvMoves.map((mv, idx) => {
-                                                                // After white moves, PV starts with black's response (no move num prefix)
-                                                                // After black moves, PV starts with white's response (with move num prefix)
-                                                                const startMoveNum = isBlackJustMoved
-                                                                    ? moveNum + 1
-                                                                    : moveNum;
-                                                                const displayMoveNum = startMoveNum + Math.floor(idx / 2);
-                                                                // Show move number before white's moves (even indices if black just moved, odd if white just moved)
-                                                                const showNum = isBlackJustMoved ? idx % 2 === 0 : idx % 2 === 1;
+                                                                // Calculate move number for each PV move
+                                                                // First move is at fullMoveNum (from FEN), alternating sides
+                                                                // If black to move, first is black, second is white (fullMoveNum+1), etc.
+                                                                const movesFromStart = idx;
+                                                                const currentMoveIsBlack = isBlackToMove ? (idx % 2 === 0) : (idx % 2 === 1);
+                                                                const displayNum = fullMoveNum + Math.floor((idx + (isBlackToMove ? 0 : 1)) / 2);
+
+                                                                // Show number before white's moves
+                                                                const showNum = !currentMoveIsBlack && (idx === 0 || (isBlackToMove && idx % 2 === 1) || (!isBlackToMove && idx % 2 === 0));
+
                                                                 return (
                                                                     <span key={idx} style={{ display: 'inline-flex', gap: '2px' }}>
-                                                                        {showNum && (
+                                                                        {idx === 0 && isBlackToMove && (
                                                                             <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
-                                                                                {displayMoveNum}.
+                                                                                {fullMoveNum}...
                                                                             </span>
                                                                         )}
-                                                                        {idx === 0 && !isBlackJustMoved && (
+                                                                        {showNum && !isBlackToMove && idx === 0 && (
                                                                             <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
-                                                                                {moveNum}...
+                                                                                {fullMoveNum}.
+                                                                            </span>
+                                                                        )}
+                                                                        {idx > 0 && !currentMoveIsBlack && (
+                                                                            <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
+                                                                                {displayNum}.
                                                                             </span>
                                                                         )}
                                                                         <span
@@ -1185,22 +1190,34 @@ export default function WhiteKnightAnalysisKids({ onNewGame, isMobile, gameData,
                                 </div>
                             )}
 
-                            {/* Exploration Mode Hint - moved here */}
+                            {/* Exploration Mode Hint - with Exit button */}
                             {isExploring && (
                                 <div style={{
                                     background: 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(139,92,246,0.15))',
                                     border: '2px solid rgba(168,85,247,0.3)',
                                     borderRadius: '12px', padding: '12px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
                                     marginBottom: '16px'
                                 }}>
-                                    <span style={{ fontSize: '16px' }}>🔮</span>
-                                    <span style={{ color: KIDS_THEME.purple, fontSize: '12px', fontWeight: '600' }}>
-                                        Exploration Mode
-                                    </span>
-                                    <span style={{ color: KIDS_THEME.textMuted, fontSize: '11px' }}>
-                                        Move pieces to explore positions
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '16px' }}>🔮</span>
+                                        <div>
+                                            <span style={{ color: KIDS_THEME.purple, fontSize: '12px', fontWeight: '600' }}>
+                                                Exploration Mode
+                                            </span>
+                                            <div style={{ color: KIDS_THEME.textMuted, fontSize: '10px' }}>
+                                                Move pieces or click history
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={exitExploration} style={{
+                                        background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.5)',
+                                        borderRadius: '8px', padding: '6px 12px', color: '#ef4444',
+                                        fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: '4px'
+                                    }}>
+                                        <X size={12} /> Exit
+                                    </button>
                                 </div>
                             )}
 
