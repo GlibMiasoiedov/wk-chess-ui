@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     Award, Zap, BookOpen, ChevronRight, ChevronLeft,
     AlertTriangle, AlertOctagon,
     CheckCircle2, XCircle, Lock, Mail,
     RotateCcw, Play, ChevronFirst, ChevronLast, ChevronDown, ChevronUp, Menu,
     Frown, Minus, Sparkles, Target, TrendingUp, BarChart2, Activity,
-    X, Eye, EyeOff, Layers, User, Clock, Flag
+    X, Eye, EyeOff, Layers, User, Clock, Flag, MessageCircle, Send
 } from 'lucide-react';
 import ChessBoard from './components/ChessBoard.jsx';
 import { getStockfishAnalyzer } from './engine/StockfishAnalyzer.js';
+import { Chess } from 'chess.js';
 
 // --- SVG CHESS PIECES ---
 const Piece = ({ type, color }) => {
@@ -72,6 +73,15 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
     const [isExploring, setIsExploring] = useState(false);
     const [explorationFen, setExplorationFen] = useState(null);
     const [explorationAnalysis, setExplorationAnalysis] = useState(null);
+    const [explorationHistory, setExplorationHistory] = useState([]); // Stack for undo
+
+    // AI Chat states
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatInput, setChatInput] = useState('');
+    const [chatMessages, setChatMessages] = useState([
+        { id: 1, sender: 'bot', text: "Hi! I'm your chess coach. Ask me about any position!" }
+    ]);
+    const chatEndRef = useRef(null);
 
     // Pro Mode and Exit Confirm State (for new design)
     const [isProMode, setIsProMode] = useState(false);
@@ -143,6 +153,57 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
         if (classification === 'mistake') return <AlertTriangle size={10} style={{ color: '#F97316' }} />;
         if (classification === 'blunder') return <AlertOctagon size={10} style={{ color: '#EF4444' }} />;
         return null;
+    };
+
+    // Convert UCI PV moves to SAN with resulting FEN for each move
+    const convertPvToSan = (startFen, uciMoves) => {
+        if (!uciMoves || uciMoves.length === 0) return [];
+        const result = [];
+        try {
+            const chess = new Chess(startFen);
+            for (const uci of uciMoves.slice(0, 8)) {
+                if (!uci || uci.length < 4) continue;
+                try {
+                    const move = chess.move({
+                        from: uci.slice(0, 2),
+                        to: uci.slice(2, 4),
+                        promotion: uci.length > 4 ? uci[4] : undefined
+                    });
+                    if (move) {
+                        result.push({ san: move.san, fen: chess.fen(), uci });
+                    }
+                } catch (e) { break; }
+            }
+        } catch (e) {
+            console.error('[Analysis] convertPvToSan error:', e);
+        }
+        return result;
+    };
+
+    // AI Chat scroll effect
+    useEffect(() => {
+        if (chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [chatMessages]);
+
+    // AI Chat send message handler
+    const handleSendMessage = async () => {
+        if (!chatInput.trim()) return;
+        const userMsg = { id: Date.now(), sender: 'user', text: chatInput };
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatInput('');
+
+        // Simple bot response (can be enhanced with AI later)
+        setTimeout(() => {
+            const fen = isExploring ? explorationFen : currentFen;
+            const botReply = {
+                id: Date.now() + 1,
+                sender: 'bot',
+                text: `I see you're looking at this position. The evaluation is ${explorationAnalysis?.eval?.toFixed(2) || analysisData?.[currentMoveIndex]?.eval?.toFixed(2) || 'N/A'}. Would you like me to explain the key ideas?`
+            };
+            setChatMessages(prev => [...prev, botReply]);
+        }, 800);
     };
 
     // Format moves into pairs like mockMoves
@@ -220,6 +281,13 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
 
     // Go to specific move
     const goToMove = (index) => {
+        // Exit exploration when clicking on move history
+        if (isExploring) {
+            setIsExploring(false);
+            setExplorationFen(null);
+            setExplorationAnalysis(null);
+            setExplorationHistory([]);
+        }
         if (index < 0) {
             goToStart();
         } else if (index >= totalMoves) {
@@ -237,29 +305,41 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
         const handleKeyDown = (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-            switch (e.key) {
-                case 'ArrowLeft':
+            if (isExploring) {
+                // In exploration mode, left arrow goes back in exploration history
+                if (e.key === 'ArrowLeft') {
                     e.preventDefault();
-                    goToPrev();
-                    break;
-                case 'ArrowRight':
+                    undoExplorationMove();
+                } else if (e.key === 'ArrowRight') {
                     e.preventDefault();
-                    goToNext();
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    goToEnd();
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    goToStart();
-                    break;
+                    // Right arrow disabled in exploration (can't redo)
+                }
+            } else {
+                // Normal game navigation
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        goToPrev();
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        goToNext();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        goToEnd();
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        goToStart();
+                        break;
+                }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentMoveIndex, totalMoves, gameData]);
+    }, [currentMoveIndex, totalMoves, gameData, isExploring, explorationHistory]);
 
     // Start Review - run real Stockfish analysis
     const startReviewAnalysis = async () => {
@@ -423,6 +503,15 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
             }
 
             const newFen = chess.fen();
+
+            // Push current position to history before updating to new position
+            if (isExploring && explorationFen) {
+                setExplorationHistory(prev => [...prev, explorationFen]);
+            } else {
+                // Starting exploration from game position
+                setExplorationHistory([startPosition]);
+            }
+
             setIsExploring(true);
             setExplorationFen(newFen);
 
@@ -489,6 +578,47 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
         setIsExploring(false);
         setExplorationFen(null);
         setExplorationAnalysis(null);
+        setExplorationHistory([]);
+    };
+
+    // Undo exploration move (go back in variant)
+    const undoExplorationMove = async () => {
+        if (explorationHistory.length > 0) {
+            // Pop the last FEN from history
+            const newHistory = [...explorationHistory];
+            const prevFen = newHistory.pop();
+            setExplorationHistory(newHistory);
+            setExplorationFen(prevFen);
+
+            // Re-analyze the previous position
+            const analyzer = await getStockfishAnalyzer();
+            const analysis = await analyzer.analyzePosition(prevFen, 18);
+
+            // Extract UCI moves from PV
+            let explorationUci = [];
+            if (Array.isArray(analysis.pv) && analysis.pv.length > 0) {
+                const pvIdx = analysis.pv.indexOf('pv');
+                if (pvIdx !== -1 && pvIdx < analysis.pv.length - 1) {
+                    explorationUci = analysis.pv.slice(pvIdx + 1);
+                } else if (!analysis.pv.includes('score')) {
+                    explorationUci = analysis.pv;
+                }
+            }
+
+            const newPv = convertPvToSan(prevFen, explorationUci);
+            setExplorationAnalysis({
+                fen: prevFen,
+                fenBefore: prevFen,
+                eval: analysis.eval,
+                bestMove: analysis.bestMove,
+                bestMoveSan: newPv[0]?.san || analysis.bestMove,
+                pv: explorationUci,
+                pvSan: newPv
+            });
+        } else {
+            // No history left, exit exploration
+            exitExploration();
+        }
     };
 
     // --- RESPONSIVE LAYOUT (Unified) ---
@@ -1201,77 +1331,115 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                         </div>
                                     </div>
 
-                                    {/* Chess Board with Final Position Overlay */}
-                                    <div style={{ width: '100%', aspectRatio: '1/1', position: 'relative', boxShadow: '0 0 60px rgba(0,0,0,0.6)', border: '1px solid #2A303C', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#151922' }}>
-                                        {/* Board with B&W filter when showing Final Position */}
+                                    {/* Chess Board with Eval Bar */}
+                                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                                        {/* Evaluation Bar (left side) */}
                                         <div style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            filter: showFinalPosition ? 'grayscale(100%) brightness(0.5)' : 'none',
-                                            transition: 'filter 0.5s ease'
+                                            width: '24px', flexShrink: 0,
+                                            background: '#151922', borderRadius: '4px',
+                                            border: '1px solid #2A303C', overflow: 'hidden',
+                                            display: 'flex', flexDirection: 'column'
                                         }}>
-                                            <ChessBoard
-                                                position={isExploring ? explorationFen : currentFen}
-                                                orientation={playerColor === 'b' ? 'black' : 'white'}
-                                                disabled={uiState !== 'full-review' || showFinalPosition}
-                                                onMove={uiState === 'full-review' ? (from, to) => handleExplorationMove({ from, to }) : null}
-                                                allowAllColors={uiState === 'full-review'}
-                                            />
+                                            {(() => {
+                                                const evalValue = isExploring
+                                                    ? (explorationAnalysis?.eval || 0)
+                                                    : (analysisData?.[currentMoveIndex]?.eval || 0);
+                                                // Clamp eval between -5 and +5, map to 0-100%
+                                                const clampedEval = Math.max(-5, Math.min(5, evalValue));
+                                                const whitePercent = 50 + (clampedEval * 10);
+                                                return (
+                                                    <>
+                                                        {/* Black's advantage (top) */}
+                                                        <div style={{
+                                                            flex: `${100 - whitePercent} 0 0`,
+                                                            background: '#1E293B',
+                                                            transition: 'flex 0.3s ease'
+                                                        }} />
+                                                        {/* Center line */}
+                                                        <div style={{ height: '2px', background: '#64748B', flexShrink: 0 }} />
+                                                        {/* White's advantage (bottom) */}
+                                                        <div style={{
+                                                            flex: `${whitePercent} 0 0`,
+                                                            background: '#F1F5F9',
+                                                            transition: 'flex 0.3s ease'
+                                                        }} />
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
 
-                                        {/* Final Position Overlay with Auto-Dismiss */}
-                                        {showFinalPosition && (
-                                            <div
-                                                style={{
-                                                    position: 'absolute',
-                                                    inset: 0,
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(11,14,20,0.85) 100%)',
-                                                    animation: 'overlayFade 2.5s ease forwards'
-                                                }}
-                                            >
-                                                <style>{`
+                                        {/* Chessboard Container */}
+                                        <div style={{ flex: 1, aspectRatio: '1/1', position: 'relative', boxShadow: '0 0 60px rgba(0,0,0,0.6)', border: '1px solid #2A303C', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#151922' }}>
+                                            {/* Board with B&W filter when showing Final Position */}
+                                            <div style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                filter: showFinalPosition ? 'grayscale(100%) brightness(0.5)' : 'none',
+                                                transition: 'filter 0.5s ease'
+                                            }}>
+                                                <ChessBoard
+                                                    position={isExploring ? explorationFen : currentFen}
+                                                    orientation={playerColor === 'b' ? 'black' : 'white'}
+                                                    disabled={uiState !== 'full-review' || showFinalPosition}
+                                                    onMove={uiState === 'full-review' ? (from, to) => handleExplorationMove({ from, to }) : null}
+                                                    allowAllColors={uiState === 'full-review'}
+                                                />
+                                            </div>
+
+                                            {/* Final Position Overlay with Auto-Dismiss */}
+                                            {showFinalPosition && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(11,14,20,0.85) 100%)',
+                                                        animation: 'overlayFade 2.5s ease forwards'
+                                                    }}
+                                                >
+                                                    <style>{`
                                                         @keyframes overlayFade {
                                                             0% { opacity: 1; }
                                                             80% { opacity: 1; }
                                                             100% { opacity: 0; pointer-events: none; }
                                                         }
                                                     `}</style>
-                                                {/* Result Emoji */}
-                                                <div style={{
-                                                    fontSize: '56px',
-                                                    marginBottom: '8px'
-                                                }}>
-                                                    {result.result === 'win' || result.winner === 'player' ? '🏆' :
-                                                        result.result === 'draw' || result.winner === 'draw' ? '🤝' : '😔'}
+                                                    {/* Result Emoji */}
+                                                    <div style={{
+                                                        fontSize: '56px',
+                                                        marginBottom: '8px'
+                                                    }}>
+                                                        {result.result === 'win' || result.winner === 'player' ? '🏆' :
+                                                            result.result === 'draw' || result.winner === 'draw' ? '🤝' : '😔'}
+                                                    </div>
+                                                    {/* Result Text */}
+                                                    <div style={{
+                                                        fontSize: '36px',
+                                                        fontWeight: 'bold',
+                                                        color: 'white',
+                                                        marginBottom: '4px',
+                                                        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif"
+                                                    }}>
+                                                        {result.result === 'win' || result.winner === 'player' ? 'Victory' :
+                                                            result.result === 'draw' || result.winner === 'draw' ? 'Draw' : 'Defeat'}
+                                                    </div>
+                                                    {/* Subtitle */}
+                                                    <div style={{
+                                                        fontSize: '13px',
+                                                        color: '#D4AF37',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.2em',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        Final Position
+                                                    </div>
                                                 </div>
-                                                {/* Result Text */}
-                                                <div style={{
-                                                    fontSize: '36px',
-                                                    fontWeight: 'bold',
-                                                    color: 'white',
-                                                    marginBottom: '4px',
-                                                    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif"
-                                                }}>
-                                                    {result.result === 'win' || result.winner === 'player' ? 'Victory' :
-                                                        result.result === 'draw' || result.winner === 'draw' ? 'Draw' : 'Defeat'}
-                                                </div>
-                                                {/* Subtitle */}
-                                                <div style={{
-                                                    fontSize: '13px',
-                                                    color: '#D4AF37',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.2em',
-                                                    fontWeight: 'bold'
-                                                }}>
-                                                    Final Position
-                                                </div>
-                                            </div>
-                                        )}
+                                            )}
 
+                                        </div>
                                     </div>
 
                                     {/* Player Info - aligned with board */}
@@ -1934,6 +2102,131 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                 </div>
                             )}
                         </div>
+
+                        {/* Exploration Mode Indicator */}
+                        {isExploring && uiState === 'full-review' && (
+                            <div style={{
+                                padding: '10px 16px',
+                                background: 'linear-gradient(90deg, rgba(212,175,55,0.1), transparent)',
+                                borderTop: '1px solid rgba(212,175,55,0.3)',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{
+                                        width: '8px', height: '8px', borderRadius: '50%',
+                                        background: '#D4AF37', animation: 'pulse 2s infinite'
+                                    }} />
+                                    <span style={{ color: '#D4AF37', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                        Exploration Mode
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={exitExploration}
+                                    style={{
+                                        padding: '6px 12px', fontSize: '10px', fontWeight: 'bold',
+                                        background: 'rgba(212,175,55,0.2)', border: '1px solid rgba(212,175,55,0.4)',
+                                        borderRadius: '6px', color: '#D4AF37', cursor: 'pointer',
+                                        textTransform: 'uppercase', letterSpacing: '0.05em'
+                                    }}
+                                >
+                                    Exit
+                                </button>
+                            </div>
+                        )}
+
+                        {/* AI Chess Coach Chat Widget */}
+                        {uiState === 'full-review' && (
+                            <div style={{ position: 'relative' }}>
+                                {/* Chat Collapsed Button */}
+                                {!isChatOpen && (
+                                    <div
+                                        onClick={() => setIsChatOpen(true)}
+                                        style={{
+                                            padding: '12px 16px', borderTop: '1px solid #2A303C',
+                                            background: 'linear-gradient(135deg, #1A1E26, #151922)',
+                                            display: 'flex', alignItems: 'center', gap: '10px',
+                                            cursor: 'pointer', transition: 'background 0.2s'
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #D4AF37, #B8962D)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        }}>
+                                            <MessageCircle size={16} style={{ color: '#0B0E14' }} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>AI Chess Coach</div>
+                                            <div style={{ color: '#64748B', fontSize: '11px' }}>Ask me about any move!</div>
+                                        </div>
+                                        <ChevronUp size={16} style={{ color: '#64748B' }} />
+                                    </div>
+                                )}
+
+                                {/* Chat Expanded Overlay */}
+                                {isChatOpen && (
+                                    <div style={{
+                                        position: 'absolute', left: 0, right: 0, bottom: 0,
+                                        height: '320px', background: '#0B0E14',
+                                        borderTop: '2px solid #D4AF37', borderRadius: '12px 12px 0 0',
+                                        display: 'flex', flexDirection: 'column', zIndex: 50
+                                    }}>
+                                        {/* Header */}
+                                        <div style={{
+                                            padding: '12px 16px', borderBottom: '1px solid #2A303C',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <MessageCircle size={16} style={{ color: '#D4AF37' }} />
+                                                <span style={{ color: 'white', fontSize: '13px', fontWeight: 'bold' }}>AI Chess Coach</span>
+                                            </div>
+                                            <button onClick={() => setIsChatOpen(false)} style={{
+                                                background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '4px'
+                                            }}>
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+
+                                        {/* Messages */}
+                                        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {chatMessages.map(msg => (
+                                                <div key={msg.id} style={{
+                                                    alignSelf: msg.sender === 'bot' ? 'flex-start' : 'flex-end',
+                                                    background: msg.sender === 'bot' ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.1)',
+                                                    border: msg.sender === 'bot' ? '1px solid rgba(212,175,55,0.3)' : '1px solid rgba(255,255,255,0.2)',
+                                                    borderRadius: '10px', padding: '8px 12px', maxWidth: '85%', fontSize: '12px', color: '#E2E8F0'
+                                                }}>
+                                                    {msg.text}
+                                                </div>
+                                            ))}
+                                            <div ref={chatEndRef} />
+                                        </div>
+
+                                        {/* Input */}
+                                        <div style={{ padding: '10px 12px', borderTop: '1px solid #2A303C', display: 'flex', gap: '8px' }}>
+                                            <input
+                                                type="text" placeholder="Ask about this position..."
+                                                value={chatInput} onChange={(e) => setChatInput(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                                style={{
+                                                    flex: 1, background: 'rgba(255,255,255,0.08)',
+                                                    border: '1px solid #2A303C', borderRadius: '8px',
+                                                    padding: '10px 12px', color: 'white', fontSize: '12px', outline: 'none'
+                                                }}
+                                            />
+                                            <button onClick={handleSendMessage} style={{
+                                                background: 'linear-gradient(135deg, #D4AF37, #B8962D)',
+                                                border: 'none', borderRadius: '8px', width: '38px', height: '38px',
+                                                color: '#0B0E14', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}>
+                                                <Send size={16} strokeWidth={2.5} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Navigation Buttons - Fixed at bottom of right panel (hide for complete state since it has its own, and hide for mobile game-over) */}
                         {uiState !== 'complete' && !(isMobile && uiState === 'game-over') && (
