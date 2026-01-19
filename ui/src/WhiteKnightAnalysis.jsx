@@ -1764,146 +1764,155 @@ export default function WhiteKnightAnalysis({ onNewGame, isMobile, gameData, set
                                         );
                                     })()}
 
-                                    {/* B. ENGINE ANALYSIS LINES (Fixed) */}
-                                    <div style={{ flexShrink: 0, padding: '14px 20px', borderBottom: '1px solid #2A303C', backgroundColor: '#0B0E14' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Layers size={14} style={{ color: '#D4AF37' }} />
-                                                <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.1em' }}>Engine Analysis</span>
+                                    {/* B. ENGINE ANALYSIS - Kids Style with Clickable PV */}
+                                    {(isExploring ? explorationAnalysis : (currentMoveIndex >= 0 && analysisData?.[currentMoveIndex])) && (
+                                        <div style={{ flexShrink: 0, padding: '14px 20px', borderBottom: '1px solid #2A303C', backgroundColor: '#0B0E14' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <Layers size={14} style={{ color: isExploring ? '#D4AF37' : '#D4AF37' }} />
+                                                    <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.1em' }}>
+                                                        {isExploring ? '🔮 Exploration Analysis' : 'Engine Analysis'}
+                                                    </span>
+                                                </div>
+                                                <span style={{ backgroundColor: '#1A1E26', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'monospace', color: '#64748B', border: '1px solid #2A303C' }}>
+                                                    {isExploring ? 'Depth 18' : 'Stockfish 16 • Depth 15'}
+                                                </span>
                                             </div>
-                                            <span style={{ backgroundColor: '#1A1E26', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'monospace', color: '#64748B', border: '1px solid #2A303C' }}>Stockfish 16 • Depth 15</span>
-                                        </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {(() => {
-                                                // Get variations from current analysis data
-                                                const currentAnalysis = analysisData?.[currentMoveIndex];
-                                                // If exploring, we use the single exploration result, otherwise we use the stored MultiPV variations
-                                                let variations = [];
+                                            <div style={{
+                                                background: isExploring ? 'rgba(212,175,55,0.08)' : 'rgba(0,0,0,0.3)',
+                                                border: isExploring ? '1px solid rgba(212,175,55,0.3)' : '1px solid #2A303C',
+                                                borderRadius: '8px', overflow: 'hidden'
+                                            }}>
+                                                {(() => {
+                                                    const data = isExploring ? explorationAnalysis : analysisData?.[currentMoveIndex];
+                                                    if (!data) return null;
+                                                    const evalValue = data.eval || 0;
 
-                                                if (isExploring && explorationAnalysis) {
-                                                    // Exploration currently returns single best line, wrap it
-                                                    variations = [{
-                                                        eval: explorationAnalysis.eval,
-                                                        pvSan: explorationAnalysis.pvSan,
-                                                        bestMove: explorationAnalysis.bestMove
-                                                    }];
-                                                    // If we add MultiPV to exploration later, this adapts automatically
-                                                    if (explorationAnalysis.variations) {
-                                                        variations = explorationAnalysis.variations;
+                                                    // Get FEN for PV conversion (position BEFORE the move for game analysis)
+                                                    const fenForPv = isExploring ? explorationFen : (data.fenBefore || data.fen || currentFen);
+
+                                                    // Extract actual UCI moves from PV array
+                                                    let uciMoves = [];
+                                                    if (Array.isArray(data.pv) && data.pv.length > 0) {
+                                                        const pvIndex = data.pv.indexOf('pv');
+                                                        if (pvIndex !== -1 && pvIndex < data.pv.length - 1) {
+                                                            uciMoves = data.pv.slice(pvIndex + 1);
+                                                        } else if (!data.pv.includes('score') && !data.pv.includes('nodes')) {
+                                                            uciMoves = data.pv;
+                                                        }
                                                     }
-                                                } else if (currentAnalysis) {
-                                                    variations = currentAnalysis.variations || [];
 
-                                                    // CRITICAL FIX: If variations are missing/empty, BUT we have main line data, 
-                                                    // manually construct the variation object so the UI shows at least the best move.
-                                                    if (!variations.length && currentAnalysis.bestMove) {
-                                                        variations = [{
-                                                            eval: currentAnalysis.eval,
-                                                            pvSan: currentAnalysis.pvSan || [],
-                                                            // If pvSan is missing, try to generate from raw bestMove? 
-                                                            // Usually pvSan is populated by StockfishAnalyzer.analyzeGame loops.
-                                                            bestMove: currentAnalysis.bestMove
-                                                        }];
-                                                    }
-                                                }
+                                                    // Convert PV to SAN with clickable positions
+                                                    const pvMoves = convertPvToSan(fenForPv, uciMoves);
 
-                                                if (!variations || variations.length === 0) {
-                                                    // If truly no data, allow manual re-analyze trigger or just show empty state
-                                                    return (
-                                                        <div style={{ padding: '10px', textAlign: 'center' }}>
-                                                            <div style={{ color: '#64748B', fontSize: '11px', marginBottom: '8px', fontStyle: 'italic' }}>
-                                                                Line details not available.
-                                                            </div>
-                                                            <button
-                                                                onClick={async () => {
-                                                                    // Manual trigger to re-analyze just THIS position
-                                                                    const analyzer = await getStockfishAnalyzer();
-                                                                    const fen = isExploring ? explorationFen : currentFen;
-                                                                    // Show temporary loading state?
-                                                                    // Ideally we'd update a local state to show spinner
-                                                                    console.log('[Analysis] Manual re-analyze requested for move', currentMoveIndex);
-                                                                    const result = await analyzer.analyzePosition(fen, 20, isProMode ? 3 : 2);
+                                                    // Parse FEN to get correct move number and side to move
+                                                    const fenParts = fenForPv.split(' ');
+                                                    const sideToMove = fenParts[1] || 'w';
+                                                    const fullMoveNum = parseInt(fenParts[5]) || 1;
+                                                    const isBlackToMove = sideToMove === 'b';
 
-                                                                    // We need to update analysisData state to trigger re-render
-                                                                    // This requires a parent callback or state update function which we might not have exposed here easily.
-                                                                    // For now, simpler to rely on the top-bar "Re-analyze" button.
-                                                                }}
-                                                                style={{
-                                                                    background: 'none', border: '1px solid #2A303C', color: '#D4AF37',
-                                                                    fontSize: '10px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                Click "Re-Analyze" above
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                }
+                                                    // Click handler for PV move
+                                                    const handlePvClick = (fen) => {
+                                                        const currentPos = isExploring ? explorationFen : fenForPv;
+                                                        if (isExploring && explorationFen) {
+                                                            setExplorationHistory(prev => [...prev, explorationFen]);
+                                                        } else {
+                                                            setExplorationHistory([currentPos]);
+                                                        }
 
-                                                // Limit to 2 lines (or 3 for Pro)
-                                                return variations.slice(0, isProMode ? 3 : 2).map((variation, index) => {
-                                                    // Determine color based on index (Best=Green, 2nd=Yellow, 3rd=Blue)
-                                                    const color = index === 0 ? '#4ADE80' : index === 1 ? '#FACC15' : '#3B82F6';
-                                                    const bgColor = index === 0 ? 'rgba(74, 222, 128, 0.1)' : index === 1 ? 'rgba(250, 204, 21, 0.1)' : 'rgba(59, 130, 246, 0.1)';
-                                                    const borderColor = index === 0 ? 'rgba(74, 222, 128, 0.2)' : index === 1 ? 'rgba(250, 204, 21, 0.2)' : 'rgba(59, 130, 246, 0.2)';
+                                                        setIsExploring(true);
+                                                        setExplorationFen(fen);
 
-                                                    // Sanitize Evaluation
-                                                    const evalNum = typeof variation.eval === 'number' ? variation.eval : 0;
-                                                    const evalText = evalNum > 0 ? `+${evalNum.toFixed(2)}` : evalNum.toFixed(2);
+                                                        (async () => {
+                                                            const analyzer = await getStockfishAnalyzer();
+                                                            const analysis = await analyzer.analyzePosition(fen, 18);
 
-                                                    // Sanitize PV
-                                                    // Logic: PV might be stored as UCI array in 'pv' or SAN array in 'pvSan'.
-                                                    // We need SAN for display. If only UCI is available, we might need to convert or show generic text.
-                                                    // In 'analyzeGame', we passed 'variations' from 'analyzePosition'.
-                                                    // 'analyzePosition' logic in StockfishAnalyzer currently only returns UCI 'pv'.
-                                                    // MISSING LINK: We need to convert UCI variations to SAN!
-                                                    // For now, if pvSan is missing, show "Loading..." or raw moves if acceptable? 
-                                                    // Actually, 'analyzeGame' loop does convert the *main* line to SAN. But the *variations* inside it might just be UCI.
+                                                            let explorationUci = [];
+                                                            if (Array.isArray(analysis.pv) && analysis.pv.length > 0) {
+                                                                const pvIdx = analysis.pv.indexOf('pv');
+                                                                if (pvIdx !== -1 && pvIdx < analysis.pv.length - 1) {
+                                                                    explorationUci = analysis.pv.slice(pvIdx + 1);
+                                                                } else if (!analysis.pv.includes('score')) {
+                                                                    explorationUci = analysis.pv;
+                                                                }
+                                                            }
 
-                                                    let moveText = '';
-                                                    if (variation.pvSan && variation.pvSan.length) {
-                                                        moveText = variation.pvSan.slice(0, 5).join(' ');
-                                                    } else if (variation.pv && variation.pv.length) {
-                                                        // Fallback to displaying UCI if SAN conversion missing for 2nd/3rd lines
-                                                        // Ideally we fix this in backend, but for UI resilience:
-                                                        moveText = variation.pv.slice(0, 5).join(' ');
-                                                    }
+                                                            const newPv = convertPvToSan(fen, explorationUci);
+                                                            setExplorationAnalysis({
+                                                                fen,
+                                                                fenBefore: fen,
+                                                                eval: analysis.eval,
+                                                                bestMove: analysis.bestMove,
+                                                                bestMoveSan: newPv[0]?.san || analysis.bestMove,
+                                                                pv: explorationUci,
+                                                                pvSan: newPv
+                                                            });
+                                                        })();
+                                                    };
 
                                                     return (
-                                                        <div key={index} style={{
-                                                            backgroundColor: '#151922',
-                                                            border: '1px solid #2A303C',
-                                                            borderLeft: `2px solid ${color}`,
-                                                            borderRadius: '6px',
+                                                        <div style={{
                                                             padding: '10px 12px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '10px',
-                                                            cursor: 'pointer'
+                                                            display: 'flex', alignItems: 'flex-start', gap: '10px'
                                                         }}>
+                                                            {/* Eval Badge */}
                                                             <span style={{
-                                                                color: color,
-                                                                fontWeight: 'bold',
-                                                                fontSize: '12px',
-                                                                fontFamily: 'monospace',
-                                                                backgroundColor: bgColor,
-                                                                padding: '2px 6px',
-                                                                borderRadius: '4px',
-                                                                minWidth: '50px',
-                                                                textAlign: 'right'
+                                                                background: evalValue > 0 ? 'rgba(74,222,128,0.2)' : evalValue < 0 ? 'rgba(239,68,68,0.2)' : 'rgba(148,163,184,0.15)',
+                                                                color: evalValue > 0 ? '#4ADE80' : evalValue < 0 ? '#EF4444' : '#94A3B8',
+                                                                padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700',
+                                                                minWidth: '48px', textAlign: 'center', flexShrink: 0,
+                                                                border: `1px solid ${evalValue > 0 ? 'rgba(74,222,128,0.3)' : evalValue < 0 ? 'rgba(239,68,68,0.3)' : 'rgba(148,163,184,0.2)'}`
                                                             }}>
-                                                                {evalText}
+                                                                {evalValue > 0 ? '+' : ''}{evalValue.toFixed(2)}
                                                             </span>
-                                                            <span style={{ flex: 1, color: '#E2E8F0', fontSize: '12px', fontFamily: 'monospace', opacity: 0.9 }}>
-                                                                {moveText} {variation.pv?.length > 5 ? '...' : ''}
-                                                            </span>
-                                                            <span style={{ color: '#64748B', fontSize: '9px', fontWeight: 'bold' }}>D:15</span>
+
+                                                            {/* Clickable PV moves */}
+                                                            <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                                                                {pvMoves.length > 0 ? pvMoves.map((mv, idx) => {
+                                                                    const currentMoveIsBlack = isBlackToMove ? (idx % 2 === 0) : (idx % 2 === 1);
+                                                                    const displayNum = fullMoveNum + Math.floor((idx + (isBlackToMove ? 1 : 0)) / 2);
+
+                                                                    return (
+                                                                        <span key={idx} style={{ display: 'inline-flex', gap: '2px' }}>
+                                                                            {idx === 0 && isBlackToMove && (
+                                                                                <span style={{ color: '#64748B', fontSize: '11px' }}>{fullMoveNum}...</span>
+                                                                            )}
+                                                                            {idx === 0 && !isBlackToMove && (
+                                                                                <span style={{ color: '#64748B', fontSize: '11px' }}>{fullMoveNum}.</span>
+                                                                            )}
+                                                                            {idx > 0 && !currentMoveIsBlack && (
+                                                                                <span style={{ color: '#64748B', fontSize: '11px' }}>{displayNum}.</span>
+                                                                            )}
+                                                                            <span
+                                                                                onClick={() => handlePvClick(mv.fen)}
+                                                                                style={{
+                                                                                    color: idx === 0 ? '#D4AF37' : '#E2E8F0',
+                                                                                    fontSize: '12px', fontWeight: idx === 0 ? '700' : '500',
+                                                                                    cursor: 'pointer', padding: '2px 5px',
+                                                                                    borderRadius: '4px',
+                                                                                    background: 'rgba(255,255,255,0.05)',
+                                                                                    transition: 'all 0.15s'
+                                                                                }}
+                                                                                onMouseOver={e => { e.target.style.background = 'rgba(212,175,55,0.2)'; e.target.style.color = '#D4AF37'; }}
+                                                                                onMouseOut={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = idx === 0 ? '#D4AF37' : '#E2E8F0'; }}
+                                                                            >
+                                                                                {mv.san}
+                                                                            </span>
+                                                                        </span>
+                                                                    );
+                                                                }) : (
+                                                                    <span style={{ color: '#64748B', fontSize: '11px', fontStyle: 'italic' }}>
+                                                                        Analyzing position...
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     );
-                                                });
-                                            })()}
+                                                })()}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     {/* Exploration Mode Panel (shown when exploring) */}
                                     {isExploring && (
