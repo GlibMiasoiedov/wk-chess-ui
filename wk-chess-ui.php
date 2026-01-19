@@ -175,12 +175,25 @@ function wk_chess_ui_enqueue_assets()
             }
         };
         
-        // Close on ESC key
+        // Check if we should auto-open based on previous state
+        try {
+            var screen = localStorage.getItem("wk_app_screen");
+            if (screen && screen !== "setup") {
+                // Give React a moment to hydrate or just open immediately
+                setTimeout(function() {
+                    window.WKChessUI.open();
+                }, 100);
+            }
+        } catch(e) { console.error(e); }
+
+        // Close on ESC key - DISABLED per user request
+        /*
         document.addEventListener("keydown", function(e) {
             if (e.key === "Escape") {
                 window.WKChessUI.close();
             }
         });
+        */
     ', 'before');
 }
 

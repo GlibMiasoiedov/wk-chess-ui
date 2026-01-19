@@ -428,7 +428,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, onClos
                         style={styles.closeButton}
                         onMouseEnter={() => setHoveredClose(true)}
                         onMouseLeave={() => setHoveredClose(false)}
-                        onClick={() => window.location.reload()}
+                        onClick={onClose}
                     >
                         <X size={24} />
                     </button>

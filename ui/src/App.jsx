@@ -10,13 +10,25 @@ import WhiteKnightLearningHub from "./WhiteKnightLearningHub";
 
 function AppContent() {
   const { isKidsMode } = useTheme();
-  const [screen, setScreen] = useState('setup');
-  const [gameSettings, setGameSettings] = useState({
-    bot: null,
-    timeControl: null,
-    color: null,
+  // Initialize screen from localStorage to persist across page reloads
+  const [screen, setScreen] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wk_app_screen');
+      return saved && ['setup', 'playing', 'analysis', 'learning'].includes(saved) ? saved : 'setup';
+    } catch { return 'setup'; }
   });
-  const [gameData, setGameData] = useState(null);
+  const [gameSettings, setGameSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wk_game_settings');
+      return saved ? JSON.parse(saved) : { bot: null, timeControl: null, color: null };
+    } catch { return { bot: null, timeControl: null, color: null }; }
+  });
+  const [gameData, setGameData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wk_game_data');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [closeHovered, setCloseHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -29,6 +41,29 @@ function AppContent() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Persist screen state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('wk_app_screen', screen);
+    } catch { }
+  }, [screen]);
+
+  // Persist game settings to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('wk_game_settings', JSON.stringify(gameSettings));
+    } catch { }
+  }, [gameSettings]);
+
+  // Persist game data to localStorage
+  useEffect(() => {
+    try {
+      if (gameData) {
+        localStorage.setItem('wk_game_data', JSON.stringify(gameData));
+      }
+    } catch { }
+  }, [gameData]);
 
   // Sync game active state with WordPress popup
   useEffect(() => {
@@ -145,6 +180,7 @@ function AppContent() {
           <WhiteKnightNewGame
             onStartGame={handleStartGame}
             onOpenLearning={handleOpenLearning}
+            onClose={handleClose}
             isMobile={isMobile}
           />
         )}
@@ -153,12 +189,14 @@ function AppContent() {
             <WhiteKnightGamePlayKids
               settings={gameSettings}
               onGameEnd={handleGameEnd}
+              onNewGame={handleNewGame}
               isMobile={isMobile}
             />
           ) : (
             <WhiteKnightGamePlay
               settings={gameSettings}
               onGameEnd={handleGameEnd}
+              onNewGame={handleNewGame}
               isMobile={isMobile}
             />
           )

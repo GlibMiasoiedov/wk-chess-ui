@@ -234,7 +234,7 @@ const GameStartCountdown = ({ onComplete }) => {
     );
 };
 
-export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
+export default function WhiteKnightGamePlay({ settings, onGameEnd, onNewGame, isMobile }) {
     // --- STATE ---
     const {
         gameState,
@@ -519,7 +519,7 @@ export default function WhiteKnightGamePlay({ settings, onGameEnd, isMobile }) {
                     )}
                 </div>
                 <button
-                    onClick={() => setShowExitWarning(true)}
+                    onClick={onNewGame}
                     style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '8px' }}
                 >
                     <X size={24} />

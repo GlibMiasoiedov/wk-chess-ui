@@ -145,7 +145,7 @@ const formatTimeControl = (tc) => {
 };
 
 // --- MAIN COMPONENT ---
-export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile }) {
+export default function WhiteKnightGamePlayKids({ settings, onGameEnd, onNewGame, isMobile }) {
     const { toggleTheme } = useTheme();
 
     const {
@@ -349,7 +349,7 @@ export default function WhiteKnightGamePlayKids({ settings, onGameEnd, isMobile 
                         </>
                     )}
                 </div>
-                <button onClick={() => onGameEnd?.('abandoned', [])} style={{
+                <button onClick={onNewGame} style={{
                     padding: '10px', background: 'rgba(255,255,255,0.1)',
                     borderRadius: '50%', border: 'none', color: 'white', cursor: 'pointer'
                 }}>
