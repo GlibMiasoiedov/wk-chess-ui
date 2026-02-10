@@ -3,6 +3,9 @@
  * Plugin Name: WK Chess UI
  * Description: White Knight React UI bundle (Vite) + popup modal.
  * Version: 0.2.0
+ * 
+ * @noinspection PhpUndefinedFunctionInspection
+ * @noinspection PhpUndefinedConstantInspection
  */
 
 if (!defined('ABSPATH'))
@@ -10,6 +13,11 @@ if (!defined('ABSPATH'))
 
 function wk_chess_ui_enqueue_assets()
 {
+    // Strict isolation: Only load on the AI Chess Academy page
+    if (!is_page('ai-chess-academy')) {
+        return;
+    }
+
     $dist_dir = plugin_dir_path(__FILE__) . 'dist/';
     $dist_url = plugin_dir_url(__FILE__) . 'dist/';
 
@@ -58,7 +66,7 @@ function wk_chess_ui_enqueue_assets()
         wp_enqueue_script(
             'wk-chess-ui-js',
             $dist_url . $entry['file'],
-            [],
+            ['wp-i18n', 'wp-element'],
             filemtime($dist_dir . $entry['file']),
             true
         );
@@ -139,38 +147,58 @@ function wk_chess_ui_enqueue_assets()
         }
     ');
 
-    // Inline JS for popup control
-    wp_add_inline_script('wk-chess-ui-js', '
+    // Inline JS for popup control using HEREDOC to avoid quote escaping issues
+    $inline_js = <<<EOD
         window.WKChessUI = {
             isGameActive: false,
             scrollPosition: 0,
             
             open: function() {
-                var overlay = document.getElementById("wk-chess-popup-overlay");
-                if (overlay) {
+                console.log("[WK-DEBUG] open() called");
+                // Find all overlays, show them (in case of duplicates, show all to be safe or just first)
+                var overlays = document.querySelectorAll("#wk-chess-popup-overlay");
+                console.log("[WK-DEBUG] Found " + overlays.length + " overlays to open.");
+                
+                if (overlays.length > 0) {
                     this.scrollPosition = window.pageYOffset;
-                    overlay.classList.add("wk-active");
+                    overlays.forEach(function(overlay) {
+                        overlay.style.display = "flex";
+                        overlay.classList.add("wk-active");
+                    });
                     document.body.classList.add("wk-popup-active");
                     document.body.style.top = -this.scrollPosition + "px";
                 }
             },
             
             close: function(force) {
+                console.log("[WK-DEBUG] close() called. Force:", force, "GameActive:", this.isGameActive);
+                
                 if (!force && this.isGameActive) {
                     if (!confirm("Ви впевнені, що хочете закрити? Поточна партія буде втрачена.")) {
                         return;
                     }
                 }
-                var overlay = document.getElementById("wk-chess-popup-overlay");
-                if (overlay) {
-                    overlay.classList.remove("wk-active");
+                
+                var overlays = document.querySelectorAll("#wk-chess-popup-overlay");
+                console.log("[WK-DEBUG] Found " + overlays.length + " overlays.");
+                
+                if (overlays.length > 0) {
+                    overlays.forEach(function(overlay) {
+                        overlay.style.display = "none";
+                        overlay.classList.remove("wk-active");
+                    });
+                    
                     document.body.classList.remove("wk-popup-active");
                     document.body.style.top = "";
                     window.scrollTo(0, this.scrollPosition);
+                    console.log("[WK-DEBUG] All overlays hidden.");
+                } else {
+                    console.error("[WK-DEBUG] No overlays found!");
                 }
             },
             
             setGameActive: function(active) {
+                console.log("[WK-DEBUG] setGameActive:", active);
                 this.isGameActive = active;
             }
         };
@@ -185,16 +213,9 @@ function wk_chess_ui_enqueue_assets()
                 }, 100);
             }
         } catch(e) { console.error(e); }
+EOD;
 
-        // Close on ESC key - DISABLED per user request
-        /*
-        document.addEventListener("keydown", function(e) {
-            if (e.key === "Escape") {
-                window.WKChessUI.close();
-            }
-        });
-        */
-    ', 'before');
+    wp_add_inline_script('wk-chess-ui-js', $inline_js, 'before');
 }
 
 add_action('wp_enqueue_scripts', 'wk_chess_ui_enqueue_assets');
@@ -204,23 +225,29 @@ function wk_chess_ui_shortcode($atts)
     $atts = shortcode_atts([
         'button_text' => 'Check Your Level',
         'button_class' => '',
+        'auto_open' => 'false',
+        'hidden' => 'false',
     ], $atts);
 
     $button_text = esc_html($atts['button_text']);
     $extra_class = esc_attr($atts['button_class']);
+    $auto_open = $atts['auto_open'] === 'true';
+    $hidden = $atts['hidden'] === 'true';
 
     ob_start();
     ?>
-    <!-- Trigger Button -->
-    <button type="button" class="wk-chess-trigger-btn <?php echo $extra_class; ?>" onclick="WKChessUI.open()">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L15 8H9L12 2Z" />
-            <path d="M5 22V12H19V22" />
-            <path d="M5 12L12 8L19 12" />
-        </svg>
-        <?php echo $button_text; ?>
-    </button>
+    <?php if (!$auto_open && !$hidden): ?>
+        <!-- Trigger Button -->
+        <button type="button" class="wk-chess-trigger-btn <?php echo $extra_class; ?>" onclick="WKChessUI.open()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L15 8H9L12 2Z" />
+                <path d="M5 22V12H19V22" />
+                <path d="M5 12L12 8L19 12" />
+            </svg>
+            <?php echo $button_text; ?>
+        </button>
+    <?php endif; ?>
 
     <!-- Popup Overlay (rendered once) -->
     <?php if (!defined('WK_CHESS_POPUP_RENDERED')): ?>
@@ -228,6 +255,19 @@ function wk_chess_ui_shortcode($atts)
         <div id="wk-chess-popup-overlay" onclick="if(event.target === this) WKChessUI.close()">
             <div id="wk-react-root"></div>
         </div>
+    <?php endif; ?>
+
+    <?php if ($auto_open): ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                if (window.WKChessUI) {
+                    window.WKChessUI.open();
+                } else {
+                    // Wait for React to load
+                    setTimeout(function () { window.WKChessUI && window.WKChessUI.open(); }, 500);
+                }
+            });
+        </script>
     <?php endif; ?>
     <?php
     return ob_get_clean();

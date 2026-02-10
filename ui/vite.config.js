@@ -17,11 +17,28 @@ export default defineConfig({
     rollupOptions: {
       input: "./src/main.jsx",
       output: {
+        format: 'iife',
+        name: 'WKChessUIApp',
+        inlineDynamicImports: true,
         entryFileNames: "assets/wk-ui.[hash].js",
         chunkFileNames: "assets/wk-ui.[hash].js",
         assetFileNames: "assets/wk-ui.[hash].[ext]",
+        globals: {
+          'react': 'React',
+          'react-dom': 'ReactDOM',
+          'wp': 'wp',
+          '@wordpress/i18n': 'wp.i18n',
+          '@wordpress/element': 'wp.element'
+        }
       },
-      external: ['jquery'],
+      external: [
+        'jquery',
+        'react',
+        'react-dom',
+        'wp',
+        '@wordpress/i18n',
+        '@wordpress/element'
+      ],
     },
   },
 });

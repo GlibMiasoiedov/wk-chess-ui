@@ -216,7 +216,7 @@ export default function WhiteKnightNewGameKids({ onStartGame, onOpenLearning, on
                     }}>♞</div>
                     <span style={{ fontWeight: '800', fontSize: '14px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>NEW GAME</span>
                     <span style={{ fontSize: '10px', color: '#64748b' }}>v2.47</span>
-                    <ThemeToggle />
+                    {/* ThemeToggle temporarily hidden - Kids mode only */}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button onClick={onOpenLearning} style={{

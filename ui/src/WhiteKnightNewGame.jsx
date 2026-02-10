@@ -385,7 +385,7 @@ export default function WhiteKnightNewGame({ onStartGame, onOpenLearning, onClos
                     <span style={styles.headerTitle}>
                         New Game v2.25
                     </span>
-                    <ThemeToggle />
+                    {/* ThemeToggle temporarily hidden - Kids mode only */}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

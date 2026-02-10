@@ -1,0 +1,209 @@
+<!-- WK Chess Landing Component - Adult Style -->
+<style>
+    .wk-landing-widget {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .wk-landing-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #D4AF37;
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 20px;
+    }
+
+    .wk-landing-title::before {
+        content: '♞';
+        font-size: 20px;
+    }
+
+    .wk-chessboard {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        width: 320px;
+        height: 320px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        margin-bottom: 24px;
+    }
+
+    .wk-square {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    /* Adult version board colors (brown/cream) */
+    .wk-square.light {
+        background: #f0d9b5;
+    }
+
+    .wk-square.dark {
+        background: #b58863;
+    }
+
+    /* Piece image */
+    .wk-square img {
+        width: 85%;
+        height: 85%;
+        object-fit: contain;
+        filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.3));
+    }
+
+    .wk-landing-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 16px 40px;
+        background: linear-gradient(135deg, #D4AF37 0%, #C5A028 100%);
+        color: #0B0E14;
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
+    }
+
+    .wk-landing-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 28px rgba(212, 175, 55, 0.45);
+    }
+
+    @media (max-width: 400px) {
+        .wk-chessboard {
+            width: 280px;
+            height: 280px;
+        }
+
+        .wk-square {
+            width: 35px;
+            height: 35px;
+        }
+    }
+</style>
+
+<div class="wk-landing-widget">
+    <div class="wk-landing-title">WHITE KNIGHT COACH ONLINE</div>
+
+    <div class="wk-chessboard" id="wk-animated-board"></div>
+
+    <button class="wk-landing-btn" onclick="WKChessUI.open()">
+        ♟ Test Your Skills
+    </button>
+</div>
+
+<script>
+    (function () {
+        // CDN for chess pieces (lichess pieces)
+        const PIECE_CDN = 'https://lichess1.org/assets/_H5H5hd/piece/cburnett';
+
+        // Piece file names
+        const PIECE_FILES = {
+            'K': 'wK.svg', 'Q': 'wQ.svg', 'R': 'wR.svg', 'B': 'wB.svg', 'N': 'wN.svg', 'P': 'wP.svg',
+            'k': 'bK.svg', 'q': 'bQ.svg', 'r': 'bR.svg', 'b': 'bB.svg', 'n': 'bN.svg', 'p': 'bP.svg'
+        };
+
+        // The Immortal Game positions
+        const POSITIONS = [
+            'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR',
+            'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR',
+            'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR',
+            'rnbqkbnr/pppp1ppp/8/4p3/4PP2/8/PPPP2PP/RNBQKBNR',
+            'rnbqkbnr/pppp1ppp/8/8/4Pp2/8/PPPP2PP/RNBQKBNR',
+            'rnbqkbnr/pppp1ppp/8/8/4Pp2/5N2/PPPP2PP/RNBQKB1R',
+            'rnbqkb1r/pppp1ppp/5n2/8/4Pp2/5N2/PPPP2PP/RNBQKB1R',
+            'rnbqkb1r/pppp1ppp/5n2/4P3/5p2/5N2/PPPP2PP/RNBQKB1R',
+            'rnbqkb1r/pppp1ppp/8/4P3/5pn1/5N2/PPPP2PP/RNBQKB1R',
+            'rnbqkb1r/pppp1ppp/8/4P3/2B2pn1/5N2/PPPP2PP/RNBQK2R',
+            'rnbqkb1r/ppp2ppp/3p4/4P3/2B2pn1/5N2/PPPP2PP/RNBQK2R',
+            'rnbqkb1r/ppp2ppp/3p4/4P3/2BP1pn1/5N2/PPP3PP/RNBQK2R',
+            'rnb1kb1r/ppp2ppp/3p4/4P2q/2BP1pn1/5N2/PPP3PP/RNBQK2R',
+            'rnb1kb1r/ppp2ppp/3p4/4P2q/2BP1pn1/5N2/PPP3PP/RNBQ1RK1',
+            'rnb1kb1r/ppp2ppp/3p4/4P3/2BP1p1n/5Nq1/PPP3PP/RNBQ1RK1',
+            'rnb1kb1r/ppp2ppp/3p4/4P3/2BP1p1n/5NP1/PPP4P/RNBQ1RK1',
+            'rnb1kb1r/ppp2ppp/3p4/4P3/2BP1p2/5NP1/PPP4n/RNBQ1RK1',
+            'rnb1kb1r/ppp2ppp/3p4/4P3/2BP1p2/2N2NP1/PPP4Q/R1B2RK1'
+        ];
+
+        let currentPos = 0;
+
+        function fenToBoard(fen) {
+            const board = [];
+            const rows = fen.split('/');
+            for (const row of rows) {
+                const boardRow = [];
+                for (const char of row) {
+                    if (!isNaN(char)) {
+                        for (let i = 0; i < parseInt(char); i++) boardRow.push(null);
+                    } else {
+                        boardRow.push(char);
+                    }
+                }
+                board.push(boardRow);
+            }
+            return board;
+        }
+
+        function renderBoard(fen) {
+            const el = document.getElementById('wk-animated-board');
+            if (!el) return;
+
+            const board = fenToBoard(fen);
+            el.innerHTML = '';
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const sq = document.createElement('div');
+                    const isLight = (row + col) % 2 === 0;
+                    sq.className = 'wk-square ' + (isLight ? 'light' : 'dark');
+
+                    const piece = board[row][col];
+                    if (piece && PIECE_FILES[piece]) {
+                        const img = document.createElement('img');
+                        img.src = PIECE_CDN + '/' + PIECE_FILES[piece];
+                        img.alt = piece;
+                        sq.appendChild(img);
+                    }
+
+                    el.appendChild(sq);
+                }
+            }
+        }
+
+        function animate() {
+            renderBoard(POSITIONS[currentPos]);
+            currentPos = (currentPos + 1) % POSITIONS.length;
+        }
+
+        function init() {
+            const el = document.getElementById('wk-animated-board');
+            if (el) {
+                renderBoard(POSITIONS[0]);
+                setInterval(animate, 2500);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+</script>

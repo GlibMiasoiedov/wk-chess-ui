@@ -10,13 +10,15 @@ const ThemeContext = createContext(null);
 const STORAGE_KEY = 'wk_theme_mode';
 
 export function ThemeProvider({ children }) {
-    // Initialize from localStorage or default to 'adult'
+    // Initialize from localStorage or default to 'kids'
+    // NOTE: Adult mode temporarily disabled - always default to kids
     const [themeName, setThemeName] = useState(() => {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
-            return stored === 'kids' ? 'kids' : 'adult';
+            // Temporarily force kids mode
+            return 'kids';
         } catch {
-            return 'adult';
+            return 'kids';
         }
     });
 
