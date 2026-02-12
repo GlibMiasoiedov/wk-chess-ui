@@ -1,10 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Chessboard } from '../lib/react-chessboard';
-import * as ReactChessboardLib from '../lib/react-chessboard';
-console.log('=== LIBRARY DEBUG ===');
-console.log('All exports:', Object.keys(ReactChessboardLib));
-console.log('Chessboard:', ReactChessboardLib.Chessboard);
-console.log('default:', ReactChessboardLib.default);
 
 export class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -54,7 +49,8 @@ function ChessBoardInternal({
     boardWidth,
     customArrows = [],
     darkSquareStyle = { backgroundColor: '#B58863' },
-    lightSquareStyle = { backgroundColor: '#F0D9B5' }
+    lightSquareStyle = { backgroundColor: '#F0D9B5' },
+    onSquareClick = null // Allow passing custom handler
 }) {
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(400);
@@ -108,8 +104,8 @@ function ChessBoardInternal({
         return styles;
     }, [highlightSquares, optionSquares, moveFrom]);
 
-    // Click handler for "Click to Move"
-    const onSquareClick = useCallback((arg) => {
+    // Internal Click handler for "Click to Move"
+    const handleSquareClick = useCallback((arg) => {
         if (disabled) return;
 
         // v5 support: arg might be string (legacy) or object { square, piece }
@@ -120,35 +116,32 @@ function ChessBoardInternal({
         // Visual feedback helper
         const getMoveOptions = (sq) => {
             if (!getValidMoves) {
-                console.log('[ChessBoard] getValidMoves is undefined!');
                 setOptionSquares({});
                 return false;
             }
             const moves = getValidMoves(sq);
-            console.log('[ChessBoard] getMoveOptions for:', sq, 'Moves:', moves);
 
             if (!moves || moves.length === 0) {
                 setOptionSquares({});
                 return false;
             }
 
+            // Only show move dots if showMoveHints is enabled
             const newSquares = {};
-            moves.forEach((move) => {
-                // v5 fix: handle both string "e4" and object { to: "e4", ... }
-                const targetSquare = typeof move === 'string' ? move : move.to;
-                const isCapture = typeof move === 'object' && (move.captured || move.flags?.includes('c'));
+            if (showMoveHints) {
+                moves.forEach((move) => {
+                    const targetSquare = typeof move === 'string' ? move : move.to;
+                    const isCapture = typeof move === 'object' && (move.captured || move.flags?.includes('c'));
+                    newSquares[targetSquare] = {
+                        background: isCapture
+                            ? 'radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)'
+                            : 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
+                        borderRadius: '50%'
+                    };
+                });
+            }
 
-                newSquares[targetSquare] = {
-                    background: isCapture
-                        ? 'radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)' // Capture hint (large)
-                        : 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)', // Move hint (small)
-                    borderRadius: '50%'
-                };
-            });
-
-            // Log generated optionSquares keys
-            console.log('[ChessBoard] Generated optionSquares keys:', Object.keys(newSquares));
-
+            // Always highlight the selected square
             newSquares[sq] = {
                 background: 'rgba(255, 255, 0, 0.4)'
             };
@@ -270,7 +263,7 @@ function ChessBoardInternal({
                 position={currentPosition}
                 boardOrientation={orientation}
                 onPieceDrop={onDrop}
-                onSquareClick={onSquareClick}
+                onSquareClick={onSquareClick || handleSquareClick}
                 onPieceDragBegin={onPieceDragBegin}
                 onPieceDragEnd={onPieceDragEnd}
                 isDraggablePiece={isDraggablePiece}

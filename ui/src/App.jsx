@@ -7,6 +7,7 @@ import WhiteKnightGamePlayKids from "./kids/WhiteKnightGamePlayKids";
 import WhiteKnightAnalysis from "./WhiteKnightAnalysis";
 import WhiteKnightAnalysisKids from "./kids/WhiteKnightAnalysisKids";
 import WhiteKnightLearningHub from "./WhiteKnightLearningHub";
+import KidsChessQuest from "./kids/KidsChessQuest";
 
 function AppContent() {
   const { isKidsMode } = useTheme();
@@ -219,9 +220,8 @@ function AppContent() {
           )
         )}
         {screen === 'learning' && (
-          <WhiteKnightLearningHub
+          <KidsChessQuest
             onBack={handleNewGame}
-            isMobile={isMobile}
           />
         )}
       </div>
